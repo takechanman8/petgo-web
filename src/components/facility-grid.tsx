@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useFacilities } from "@/hooks/useFacilities";
+import { useFavorites } from "@/hooks/useFavorites";
+import { useAuth } from "@/hooks/useAuth";
+import { FavoriteButton } from "@/components/favorite-button";
 import type { Facility } from "@/types/facility";
 
 function StarRating({ rating, reviews }: { rating: number; reviews: number }) {
@@ -40,6 +43,8 @@ function PetScore({ score }: { score: number }) {
 
 export function FacilityGrid() {
   const { facilities, loading } = useFacilities();
+  const { user, signInWithGoogle } = useAuth();
+  const { favoriteIds, toggle } = useFavorites(user);
 
   return (
     <section className="py-16 px-4 sm:px-6 bg-gray-50">
@@ -70,7 +75,13 @@ export function FacilityGrid() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {facilities.map((facility) => (
               <Link key={facility.id} href={`/facility/${facility.id}`} className="block">
-                <FacilityCard facility={facility} />
+                <FacilityCard
+                  facility={facility}
+                  isFavorite={favoriteIds.has(facility.id)}
+                  onToggleFavorite={() => toggle(facility.id)}
+                  onLoginRequired={signInWithGoogle}
+                  isLoggedIn={!!user}
+                />
               </Link>
             ))}
           </div>
@@ -80,7 +91,19 @@ export function FacilityGrid() {
   );
 }
 
-function FacilityCard({ facility }: { facility: Facility }) {
+function FacilityCard({
+  facility,
+  isFavorite,
+  onToggleFavorite,
+  onLoginRequired,
+  isLoggedIn,
+}: {
+  facility: Facility;
+  isFavorite: boolean;
+  onToggleFavorite: () => Promise<boolean>;
+  onLoginRequired: () => void;
+  isLoggedIn: boolean;
+}) {
   return (
     <article className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer">
       <div className="relative h-48 overflow-hidden">
@@ -92,6 +115,14 @@ function FacilityCard({ facility }: { facility: Facility }) {
         <span className="absolute top-3 left-3 rounded-full bg-white/90 px-2.5 py-0.5 text-xs font-medium text-primary">
           {facility.type}
         </span>
+        <div className="absolute top-3 right-3">
+          <FavoriteButton
+            isFavorite={isFavorite}
+            onToggle={onToggleFavorite}
+            onLoginRequired={onLoginRequired}
+            isLoggedIn={isLoggedIn}
+          />
+        </div>
       </div>
 
       <div className="p-4">

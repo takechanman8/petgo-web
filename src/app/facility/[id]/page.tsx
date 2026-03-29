@@ -6,6 +6,11 @@ import { createClient } from "@/lib/supabase";
 import { mapDbRowToFacility } from "@/lib/mapFacility";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { ReviewModal } from "@/components/review-modal";
+import { ReviewList } from "@/components/review-list";
+import { FavoriteButton } from "@/components/favorite-button";
+import { useAuth } from "@/hooks/useAuth";
+import { useFavorites } from "@/hooks/useFavorites";
 import type { Facility } from "@/types/facility";
 
 export default function FacilityDetailPage({
@@ -16,6 +21,11 @@ export default function FacilityDetailPage({
   const { id } = use(params);
   const [facility, setFacility] = useState<Facility | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewRefreshKey, setReviewRefreshKey] = useState(0);
+  const [successMessage, setSuccessMessage] = useState(false);
+  const { user, signInWithGoogle } = useAuth();
+  const { favoriteIds, toggle } = useFavorites(user);
 
   useEffect(() => {
     const supabase = createClient();
@@ -89,6 +99,15 @@ export default function FacilityDetailPage({
                 <span className="absolute top-4 left-4 rounded-full bg-white/90 px-3 py-1 text-sm font-medium text-primary">
                   {facility.type}
                 </span>
+                <div className="absolute top-4 right-4">
+                  <FavoriteButton
+                    isFavorite={favoriteIds.has(facility.id)}
+                    onToggle={() => toggle(facility.id)}
+                    onLoginRequired={signInWithGoogle}
+                    isLoggedIn={!!user}
+                    size="md"
+                  />
+                </div>
               </div>
 
               <div className="p-6 sm:p-8 space-y-6">
@@ -152,6 +171,53 @@ export default function FacilityDetailPage({
                 </div>
               </div>
             </div>
+          )}
+
+          {/* レビューセクション */}
+          {facility && (
+            <div className="mt-8 space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">レビュー</h2>
+                {user ? (
+                  <button
+                    onClick={() => setShowReviewModal(true)}
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-primary-light"
+                  >
+                    レビューを書く
+                  </button>
+                ) : (
+                  <button
+                    onClick={signInWithGoogle}
+                    className="rounded-lg border-2 border-primary px-4 py-2 text-sm font-bold text-primary transition-colors hover:bg-green-50"
+                  >
+                    ログインしてレビューを書く
+                  </button>
+                )}
+              </div>
+
+              {successMessage && (
+                <div className="rounded-lg bg-green-50 border border-green-200 p-4 text-sm text-primary font-medium">
+                  レビューありがとうございます！+50ポイント獲得 🎉
+                </div>
+              )}
+
+              <ReviewList facilityId={id} refreshKey={reviewRefreshKey} />
+            </div>
+          )}
+
+          {/* レビュー投稿モーダル */}
+          {showReviewModal && user && facility && (
+            <ReviewModal
+              facilityId={id}
+              user={user}
+              onClose={() => setShowReviewModal(false)}
+              onSubmitted={() => {
+                setShowReviewModal(false);
+                setReviewRefreshKey((k) => k + 1);
+                setSuccessMessage(true);
+                setTimeout(() => setSuccessMessage(false), 5000);
+              }}
+            />
           )}
         </div>
       </main>
