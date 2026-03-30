@@ -7,10 +7,43 @@ const notoSansJP = Noto_Sans_JP({
   variable: "--font-noto-sans-jp",
 });
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://petgo.jp";
+
 export const metadata: Metadata = {
-  title: "PetGo - ペット同伴OKの施設レビュー＆予約",
+  title: {
+    default: "PetGo - ペット同伴OK施設の検索・予約・レビュー",
+    template: "%s | PetGo",
+  },
   description:
-    "ペットと一緒に楽しめる施設を探そう。ドッグラン付きホテル、猫OKカフェなど、ペット同伴OKの施設レビュー＆予約プラットフォーム。",
+    "ペットと一緒に楽しめる施設を探そう。全国のドッグラン付きホテル、ペット同伴OKのカフェ・レストラン・キャンプ場など、口コミ・評価で比較して予約できるプラットフォーム。",
+  metadataBase: new URL(BASE_URL),
+  openGraph: {
+    title: "PetGo - ペット同伴OK施設の検索・予約・レビュー",
+    description:
+      "全国のペット同伴OK施設を口コミ・評価で比較。ホテル、カフェ、レストラン、キャンプ場など、愛犬・愛猫と楽しめるスポットが見つかる。",
+    url: BASE_URL,
+    siteName: "PetGo",
+    locale: "ja_JP",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.svg",
+        width: 1200,
+        height: 630,
+        alt: "PetGo - ペット同伴OK施設の検索・予約・レビュー",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PetGo - ペット同伴OK施設の検索・予約・レビュー",
+    description:
+      "全国のペット同伴OK施設を口コミ・評価で比較。愛犬・愛猫と楽しめるスポットが見つかる。",
+    images: ["/og-image.svg"],
+  },
+  alternates: {
+    canonical: BASE_URL,
+  },
 };
 
 export default function RootLayout({
