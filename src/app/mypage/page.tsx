@@ -23,6 +23,19 @@ interface UserReview {
   created_at: string;
 }
 
+interface Reservation {
+  id: string;
+  facility_id: string;
+  facility_name: string;
+  check_in_date: string;
+  check_out_date: string;
+  guests: number;
+  pets_info: string | null;
+  total_price: number;
+  status: "pending" | "confirmed" | "cancelled";
+  created_at: string;
+}
+
 const SIZE_LABELS: Record<string, string> = {
   small: "小型",
   medium: "中型",
@@ -34,8 +47,9 @@ export default function MyPage() {
   const { favoriteIds, toggle } = useFavorites(user);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [reviews, setReviews] = useState<UserReview[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [activeTab, setActiveTab] = useState<"favorites" | "reviews">("favorites");
+  const [activeTab, setActiveTab] = useState<"favorites" | "reviews" | "reservations">("favorites");
 
   useEffect(() => {
     if (!user) {
@@ -48,7 +62,7 @@ export default function MyPage() {
     async function fetchData() {
       setLoadingData(true);
 
-      const [favResult, reviewResult] = await Promise.all([
+      const [favResult, reviewResult, reservationResult] = await Promise.all([
         supabase
           .from("favorites")
           .select("facility_id, facilities(*, reviews(rating))")
@@ -56,6 +70,11 @@ export default function MyPage() {
         supabase
           .from("reviews")
           .select("id, facility_id, rating, pet_type, pet_breed, comment, photo_url, created_at, facilities(name)")
+          .eq("user_id", user!.id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("reservations")
+          .select("id, facility_id, check_in_date, check_out_date, guests, pets_info, total_price, status, created_at, facilities(name)")
           .eq("user_id", user!.id)
           .order("created_at", { ascending: false }),
       ]);
@@ -84,6 +103,22 @@ export default function MyPage() {
           created_at: r.created_at,
         }));
         setReviews(mapped);
+      }
+
+      if (reservationResult.data) {
+        const mapped = reservationResult.data.map((r) => ({
+          id: r.id,
+          facility_id: r.facility_id,
+          facility_name: (r.facilities as unknown as { name: string })?.name ?? "不明な施設",
+          check_in_date: r.check_in_date,
+          check_out_date: r.check_out_date,
+          guests: r.guests,
+          pets_info: r.pets_info,
+          total_price: r.total_price,
+          status: r.status as Reservation["status"],
+          created_at: r.created_at,
+        }));
+        setReservations(mapped);
       }
 
       setLoadingData(false);
@@ -193,6 +228,21 @@ export default function MyPage() {
                 </span>
               )}
             </button>
+            <button
+              onClick={() => setActiveTab("reservations")}
+              className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                activeTab === "reservations"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              予約履歴
+              {reservations.length > 0 && (
+                <span className="ml-1.5 rounded-full bg-green-50 px-2 py-0.5 text-xs text-primary">
+                  {reservations.length}
+                </span>
+              )}
+            </button>
           </div>
 
           {loadingData ? (
@@ -269,60 +319,123 @@ export default function MyPage() {
                 ))}
               </div>
             )
-          ) : reviews.length === 0 ? (
+          ) : activeTab === "reviews" ? (
+            reviews.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="text-5xl mb-4">📝</div>
+                <p className="text-gray-500 mb-2">まだレビューを投稿していません</p>
+                <Link href="/" className="text-sm text-primary hover:underline">
+                  施設を探してレビューを書く →
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {reviews.map((review) => (
+                  <Link
+                    key={review.id}
+                    href={`/facility/${review.facility_id}`}
+                    className="block rounded-xl bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-bold text-gray-900">{review.facility_name}</h3>
+                        <div className="mt-1 flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <svg
+                              key={star}
+                              className={`h-4 w-4 ${star <= review.rating ? "text-amber-400" : "text-gray-200"}`}
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-primary">
+                          {review.pet_type === "犬" ? "🐶" : "🐱"}{" "}
+                          {review.pet_breed || review.pet_type}
+                        </span>
+                        <p className="mt-1 text-xs text-gray-400">
+                          {new Date(review.created_at).toLocaleDateString("ja-JP")}
+                        </p>
+                      </div>
+                    </div>
+                    {review.comment && (
+                      <p className="mt-3 text-sm text-gray-700 line-clamp-2">{review.comment}</p>
+                    )}
+                    {review.photo_url && (
+                      <img
+                        src={review.photo_url}
+                        alt="レビュー写真"
+                        className="mt-3 h-32 w-full rounded-lg object-cover"
+                      />
+                    )}
+                  </Link>
+                ))}
+              </div>
+            )
+          ) : reservations.length === 0 ? (
             <div className="text-center py-16">
-              <div className="text-5xl mb-4">📝</div>
-              <p className="text-gray-500 mb-2">まだレビューを投稿していません</p>
+              <div className="text-5xl mb-4">📋</div>
+              <p className="text-gray-500 mb-2">予約履歴がありません</p>
               <Link href="/" className="text-sm text-primary hover:underline">
-                施設を探してレビューを書く →
+                施設を探して予約する →
               </Link>
             </div>
           ) : (
             <div className="space-y-4">
-              {reviews.map((review) => (
-                <Link
-                  key={review.id}
-                  href={`/facility/${review.facility_id}`}
-                  className="block rounded-xl bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-bold text-gray-900">{review.facility_name}</h3>
-                      <div className="mt-1 flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <svg
-                            key={star}
-                            className={`h-4 w-4 ${star <= review.rating ? "text-amber-400" : "text-gray-200"}`}
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                        ))}
+              {reservations.map((reservation) => {
+                const statusLabel =
+                  reservation.status === "confirmed"
+                    ? "確定"
+                    : reservation.status === "cancelled"
+                      ? "キャンセル済"
+                      : "保留中";
+                const statusColor =
+                  reservation.status === "confirmed"
+                    ? "bg-green-50 text-primary"
+                    : reservation.status === "cancelled"
+                      ? "bg-gray-100 text-gray-500"
+                      : "bg-amber-50 text-amber-700";
+
+                return (
+                  <Link
+                    key={reservation.id}
+                    href={`/facility/${reservation.facility_id}`}
+                    className="block rounded-xl bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-bold text-gray-900">
+                          {reservation.facility_name}
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-600">
+                          {reservation.check_in_date} 〜 {reservation.check_out_date}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {reservation.guests}名
+                          {reservation.pets_info && ` / ${reservation.pets_info}`}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span
+                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColor}`}
+                        >
+                          {statusLabel}
+                        </span>
+                        <p className="mt-2 text-lg font-bold text-gray-900">
+                          ¥{reservation.total_price.toLocaleString()}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-400">
+                          {new Date(reservation.created_at).toLocaleDateString("ja-JP")}
+                        </p>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-primary">
-                        {review.pet_type === "犬" ? "🐶" : "🐱"}{" "}
-                        {review.pet_breed || review.pet_type}
-                      </span>
-                      <p className="mt-1 text-xs text-gray-400">
-                        {new Date(review.created_at).toLocaleDateString("ja-JP")}
-                      </p>
-                    </div>
-                  </div>
-                  {review.comment && (
-                    <p className="mt-3 text-sm text-gray-700 line-clamp-2">{review.comment}</p>
-                  )}
-                  {review.photo_url && (
-                    <img
-                      src={review.photo_url}
-                      alt="レビュー写真"
-                      className="mt-3 h-32 w-full rounded-lg object-cover"
-                    />
-                  )}
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>
