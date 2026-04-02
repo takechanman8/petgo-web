@@ -3,12 +3,16 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
+import { usePoints } from "@/hooks/usePoints";
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { user, loading, signInWithGoogle, signOut } = useAuth();
+  const { isPassMember } = useSubscription(user);
+  const { totalPoints } = usePoints(user);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -55,7 +59,15 @@ export function Header() {
         {loading ? (
           <div className="h-9 w-9 rounded-full bg-gray-200 animate-pulse" />
         ) : user ? (
-          <div className="relative" ref={menuRef}>
+          <div className="relative flex items-center gap-2" ref={menuRef}>
+            <span className="hidden sm:inline-flex items-center gap-1 text-xs font-medium text-amber-600">
+              {totalPoints.toLocaleString()}pt
+            </span>
+            {isPassMember && (
+              <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-sm">
+                PASS
+              </span>
+            )}
             <button
               onClick={() => setMenuOpen((prev) => !prev)}
               className="flex items-center rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"

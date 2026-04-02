@@ -1,5 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Noto_Sans_JP } from "next/font/google";
+import { PWAProvider } from "@/components/pwa-provider";
+import { InstallPrompt } from "@/components/install-prompt";
 import "./globals.css";
 
 const notoSansJP = Noto_Sans_JP({
@@ -17,6 +19,15 @@ export const metadata: Metadata = {
   description:
     "ペットと一緒に楽しめる施設を探そう。全国のドッグラン付きホテル、ペット同伴OKのカフェ・レストラン・キャンプ場など、口コミ・評価で比較して予約できるプラットフォーム。",
   metadataBase: new URL(BASE_URL),
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "PetGo",
+  },
+  icons: {
+    apple: "/icon-192x192.svg",
+  },
   openGraph: {
     title: "PetGo - ペット同伴OK施設の検索・予約・レビュー",
     description:
@@ -46,6 +57,14 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#1B5E20",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -53,7 +72,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" className={`${notoSansJP.variable} antialiased`}>
-      <body className="min-h-screen flex flex-col font-sans">{children}</body>
+      <body className="min-h-screen flex flex-col font-sans">
+        <PWAProvider />
+        <InstallPrompt />
+        {children}
+      </body>
     </html>
   );
 }

@@ -2,11 +2,13 @@
 
 import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase";
+import { addPoints } from "@/hooks/usePoints";
 import type { User } from "@supabase/supabase-js";
 
 interface ReviewModalProps {
   facilityId: string;
   user: User;
+  isPassMember?: boolean;
   onClose: () => void;
   onSubmitted: () => void;
 }
@@ -14,6 +16,7 @@ interface ReviewModalProps {
 export function ReviewModal({
   facilityId,
   user,
+  isPassMember = false,
   onClose,
   onSubmitted,
 }: ReviewModalProps) {
@@ -27,6 +30,7 @@ export function ReviewModal({
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [earnedPoints, setEarnedPoints] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,6 +91,11 @@ export function ReviewModal({
       });
 
       if (insertError) throw insertError;
+
+      // ポイント付与
+      const { points } = await addPoints(user.id, "review", isPassMember, facilityId);
+      setEarnedPoints(points);
+
       onSubmitted();
     } catch (err: unknown) {
       console.error("Review submission error:", err);
@@ -265,12 +274,23 @@ export function ReviewModal({
             <p className="text-sm text-red-500">{error}</p>
           )}
 
+          {earnedPoints > 0 && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-center">
+              <p className="text-sm font-bold text-amber-700">
+                🎉 +{earnedPoints}ポイント獲得！
+                {isPassMember && (
+                  <span className="ml-1 text-xs font-normal text-amber-600">（PASS会員2倍）</span>
+                )}
+              </p>
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={submitting || rating === 0}
+            disabled={submitting || rating === 0 || earnedPoints > 0}
             className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-white transition-colors hover:bg-primary-light disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {submitting ? "投稿中..." : "投稿する"}
+            {submitting ? "投稿中..." : earnedPoints > 0 ? "投稿完了" : "投稿する"}
           </button>
         </form>
       </div>

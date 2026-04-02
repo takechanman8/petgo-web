@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
+import { usePoints, usePointsForCoupon } from "@/hooks/usePoints";
 import type { Facility } from "@/types/facility";
 
 interface ReservationFormProps {
@@ -10,12 +12,15 @@ interface ReservationFormProps {
 
 export function ReservationForm({ facility }: ReservationFormProps) {
   const { user, signInWithGoogle } = useAuth();
+  const { isPassMember } = useSubscription(user);
+  const { totalPoints, refetch: refetchPoints } = usePoints(user);
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [guests, setGuests] = useState(1);
   const [petType, setPetType] = useState("犬");
   const [petSize, setPetSize] = useState("小型");
   const [petCount, setPetCount] = useState(1);
+  const [usePointDiscount, setUsePointDiscount] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -33,8 +38,12 @@ export function ReservationForm({ facility }: ReservationFormProps) {
         )
       : 0;
 
-  // 料金計算（施設のprice × 泊数）
-  const totalPrice = facility.price * Math.max(nights, 1) * guests;
+  // 利用可能なクーポン数（500ポイント単位）
+  const availableCoupons = Math.floor(totalPoints / 500);
+  const basePrice = facility.price * Math.max(nights, 1) * guests;
+  // ポイント割引額（最大で合計金額まで）
+  const pointDiscount = usePointDiscount ? Math.min(availableCoupons * 500, basePrice) : 0;
+  const totalPrice = basePrice - pointDiscount;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -57,6 +66,18 @@ export function ReservationForm({ facility }: ReservationFormProps) {
 
     setLoading(true);
     try {
+      // ポイント利用処理
+      if (usePointDiscount && pointDiscount > 0) {
+        const pointsToUse = Math.ceil(pointDiscount / 500) * 500;
+        const { error: pointError } = await usePointsForCoupon(user.id, pointsToUse);
+        if (pointError) {
+          setError(`ポイント利用エラー: ${pointError}`);
+          setLoading(false);
+          return;
+        }
+        refetchPoints();
+      }
+
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -192,6 +213,28 @@ export function ReservationForm({ facility }: ReservationFormProps) {
           </div>
         </div>
 
+        {/* ポイント利用 */}
+        {user && availableCoupons > 0 && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={usePointDiscount}
+                onChange={(e) => setUsePointDiscount(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <span className="text-sm font-medium text-amber-800">
+                ポイントを使う（{totalPoints.toLocaleString()}pt保有）
+              </span>
+            </label>
+            {usePointDiscount && (
+              <p className="mt-2 text-xs text-amber-700">
+                {Math.ceil(pointDiscount / 500) * 500}pt利用 → ¥{pointDiscount.toLocaleString()}OFF
+              </p>
+            )}
+          </div>
+        )}
+
         {/* 料金 */}
         <div className="rounded-lg bg-green-50 p-4">
           <div className="flex items-center justify-between">
@@ -203,6 +246,12 @@ export function ReservationForm({ facility }: ReservationFormProps) {
           {nights > 0 && (
             <p className="mt-1 text-xs text-gray-500 text-right">
               ¥{facility.price.toLocaleString()} × {nights}泊 × {guests}名
+              {pointDiscount > 0 && ` - ¥${pointDiscount.toLocaleString()}（ポイント割引）`}
+            </p>
+          )}
+          {isPassMember && (
+            <p className="mt-1 text-xs text-amber-600 text-right">
+              PASS会員: 予約完了で+200pt獲得予定
             </p>
           )}
         </div>

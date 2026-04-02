@@ -10,7 +10,9 @@ import { ReviewModal } from "@/components/review-modal";
 import { ReviewList } from "@/components/review-list";
 import { FavoriteButton } from "@/components/favorite-button";
 import { ReservationForm } from "@/components/reservation-form";
+import { SimilarFacilities } from "@/components/similar-facilities";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
 import { useFavorites } from "@/hooks/useFavorites";
 import type { Facility } from "@/types/facility";
 
@@ -21,11 +23,13 @@ export default function FacilityDetailClient({
 }) {
   const { id } = use(params);
   const [facility, setFacility] = useState<Facility | null>(null);
+  const [facilityRaw, setFacilityRaw] = useState<{ prefecture: string; type: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewRefreshKey, setReviewRefreshKey] = useState(0);
   const [successMessage, setSuccessMessage] = useState(false);
   const { user, signInWithGoogle } = useAuth();
+  const { isPassMember } = useSubscription(user);
   const { favoriteIds, toggle } = useFavorites(user);
 
   useEffect(() => {
@@ -41,11 +45,16 @@ export default function FacilityDetailClient({
 
         if (error) throw error;
         if (data) {
+          const row = data as Record<string, unknown>;
           const mapped = mapDbRowToFacility(
-            data as Record<string, unknown>,
-            (data as Record<string, unknown>).reviews as { rating: number }[],
+            row,
+            row.reviews as { rating: number }[],
           );
           setFacility(mapped);
+          setFacilityRaw({
+            prefecture: row.prefecture as string,
+            type: row.type as string,
+          });
         }
       } catch (e) {
         console.error("[FacilityDetail] Error fetching facility:", e);
@@ -214,6 +223,7 @@ export default function FacilityDetailClient({
             <ReviewModal
               facilityId={id}
               user={user}
+              isPassMember={isPassMember}
               onClose={() => setShowReviewModal(false)}
               onSubmitted={() => {
                 setShowReviewModal(false);
@@ -221,6 +231,15 @@ export default function FacilityDetailClient({
                 setSuccessMessage(true);
                 setTimeout(() => setSuccessMessage(false), 5000);
               }}
+            />
+          )}
+
+          {/* 類似施設セクション */}
+          {facility && (
+            <SimilarFacilities
+              facilityId={id}
+              prefecture={facilityRaw?.prefecture ?? null}
+              type={facilityRaw?.type ?? null}
             />
           )}
         </div>

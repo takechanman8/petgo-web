@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
+import { addPoints } from "@/hooks/usePoints";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 
@@ -34,7 +36,9 @@ export default function ReservationSuccessPage() {
 function ReservationSuccessContent() {
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
+  const { isPassMember, loading: subLoading } = useSubscription(user);
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  const [earnedPoints, setEarnedPoints] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
   const savedRef = useRef(false);
 
@@ -47,7 +51,7 @@ function ReservationSuccessContent() {
   const totalPrice = searchParams.get("total_price");
 
   useEffect(() => {
-    if (authLoading || !user || savedRef.current) return;
+    if (authLoading || subLoading || !user || savedRef.current) return;
     if (!sessionId || !facilityId || !checkIn || !checkOut || !totalPrice) {
       setStatus("error");
       setErrorMsg("予約情報が不足しています");
@@ -88,12 +92,15 @@ function ReservationSuccessContent() {
         setStatus("error");
         setErrorMsg("予約の保存に失敗しました。お問い合わせください。");
       } else {
+        // ポイント付与
+        const { points } = await addPoints(user!.id, "reservation", isPassMember, facilityId!);
+        setEarnedPoints(points);
         setStatus("success");
       }
     }
 
     saveReservation();
-  }, [user, authLoading, sessionId, facilityId, checkIn, checkOut, guests, petsInfo, totalPrice]);
+  }, [user, authLoading, subLoading, isPassMember, sessionId, facilityId, checkIn, checkOut, guests, petsInfo, totalPrice]);
 
   return (
     <>
@@ -155,6 +162,17 @@ function ReservationSuccessContent() {
                   </div>
                 </div>
               </div>
+
+              {earnedPoints > 0 && (
+                <div className="rounded-xl bg-amber-50 border border-amber-200 p-4">
+                  <p className="text-sm font-bold text-amber-700">
+                    🎉 +{earnedPoints}ポイント獲得！
+                    {isPassMember && (
+                      <span className="ml-2 text-xs font-normal text-amber-600">（PASS会員2倍ボーナス）</span>
+                    )}
+                  </p>
+                </div>
+              )}
 
               <div className="flex gap-3 justify-center">
                 <Link

@@ -8,6 +8,9 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { FavoriteButton } from "@/components/favorite-button";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
+import { usePoints, usePointsForCoupon } from "@/hooks/usePoints";
+import type { PointHistory } from "@/hooks/usePoints";
 import { useFavorites } from "@/hooks/useFavorites";
 import type { Facility } from "@/types/facility";
 
@@ -44,7 +47,11 @@ const SIZE_LABELS: Record<string, string> = {
 
 export default function MyPage() {
   const { user, loading: authLoading, signInWithGoogle } = useAuth();
+  const { subscription, isPassMember, loading: subLoading } = useSubscription(user);
+  const { totalPoints, history: pointHistory, loading: pointsLoading, refetch: refetchPoints } = usePoints(user);
   const { favoriteIds, toggle } = useFavorites(user);
+  const [cancellingPass, setCancellingPass] = useState(false);
+  const [exchangingCoupon, setExchangingCoupon] = useState(false);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [reviews, setReviews] = useState<UserReview[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -195,6 +202,134 @@ export default function MyPage() {
               </div>
             </div>
           )}
+
+          {/* PetGo PASS Section */}
+          <div className="mb-8 rounded-xl bg-white p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-xl">👑</span>
+                <div>
+                  <h2 className="font-bold text-gray-900">PetGo PASS</h2>
+                  {subLoading ? (
+                    <div className="mt-1 h-4 w-32 rounded bg-gray-200 animate-pulse" />
+                  ) : isPassMember && subscription ? (
+                    <p className="text-sm text-gray-500">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-2 py-0.5 text-xs font-bold text-white mr-2">
+                        PASS
+                      </span>
+                      次回更新日: {new Date(subscription.current_period_end).toLocaleDateString("ja-JP")}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-500">未加入</p>
+                  )}
+                </div>
+              </div>
+              <div>
+                {subLoading ? null : isPassMember ? (
+                  <button
+                    onClick={async () => {
+                      if (!confirm("PetGo PASSを解約しますか？現在の請求期間が終了するまで特典はご利用いただけます。")) return;
+                      setCancellingPass(true);
+                      const supabase = createClient();
+                      await supabase
+                        .from("subscriptions")
+                        .update({ status: "cancelled" })
+                        .eq("id", subscription!.id);
+                      window.location.reload();
+                    }}
+                    disabled={cancellingPass}
+                    className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-medium text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    {cancellingPass ? "処理中..." : "解約する"}
+                  </button>
+                ) : (
+                  <Link
+                    href="/pass"
+                    className="rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-xs font-bold text-white hover:shadow-md transition-all"
+                  >
+                    加入する
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Points Section */}
+          <div className="mb-8 rounded-xl bg-white p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-xl">🪙</span>
+              <h2 className="font-bold text-gray-900">ポイント</h2>
+            </div>
+
+            {pointsLoading ? (
+              <div className="animate-pulse space-y-3">
+                <div className="h-10 w-32 rounded bg-gray-200" />
+                <div className="h-4 w-48 rounded bg-gray-200" />
+              </div>
+            ) : (
+              <>
+                <div className="flex items-end justify-between mb-4">
+                  <div>
+                    <p className="text-4xl font-bold text-primary">{totalPoints.toLocaleString()}<span className="text-lg font-normal text-gray-500 ml-1">pt</span></p>
+                    {isPassMember && (
+                      <p className="text-xs text-amber-600 mt-1">PASS会員: ポイント2倍ボーナス適用中</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (totalPoints < 500) return;
+                      if (!confirm("500ポイントを500円OFFクーポンに交換しますか？")) return;
+                      setExchangingCoupon(true);
+                      const { error } = await usePointsForCoupon(user!.id, 500);
+                      if (error) {
+                        alert(`エラー: ${error}`);
+                      } else {
+                        alert("500円OFFクーポンを獲得しました！次回予約時に自動適用されます。");
+                        refetchPoints();
+                      }
+                      setExchangingCoupon(false);
+                    }}
+                    disabled={totalPoints < 500 || exchangingCoupon}
+                    className={`rounded-lg px-4 py-2 text-xs font-bold transition-all ${
+                      totalPoints >= 500
+                        ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:shadow-md"
+                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    } disabled:opacity-50`}
+                  >
+                    {exchangingCoupon ? "交換中..." : "クーポンに交換（500pt）"}
+                  </button>
+                </div>
+
+                {/* ポイント履歴 */}
+                {pointHistory.length > 0 && (
+                  <div className="border-t border-gray-100 pt-4">
+                    <h3 className="text-sm font-medium text-gray-700 mb-3">ポイント履歴</h3>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {pointHistory.map((entry) => (
+                        <div key={entry.id} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className={`inline-block h-2 w-2 rounded-full ${entry.type === "earned" ? "bg-green-400" : "bg-red-400"}`} />
+                            <span className="text-gray-700">
+                              {entry.reason === "reservation" && "予約完了"}
+                              {entry.reason === "review" && "レビュー投稿"}
+                              {entry.reason === "referral" && "紹介ボーナス"}
+                              {entry.reason === "coupon_used" && "クーポン交換"}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {new Date(entry.created_at).toLocaleDateString("ja-JP")}
+                            </span>
+                          </div>
+                          <span className={`font-medium ${entry.type === "earned" ? "text-green-600" : "text-red-500"}`}>
+                            {entry.type === "earned" ? "+" : "-"}{entry.points}pt
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
 
           {/* Tabs */}
           <div className="flex gap-1 border-b border-gray-200 mb-6">
