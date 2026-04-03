@@ -7,18 +7,11 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { usePoints } from "@/hooks/usePoints";
 
 export function Header() {
-  const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { user, loading, signInWithGoogle, signOut } = useAuth();
   const { isPassMember } = useSubscription(user);
   const { totalPoints } = usePoints(user);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -34,34 +27,38 @@ export function Header() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? "bg-white/80 backdrop-blur-md shadow-sm" : "bg-white"
-      }`}
+      className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm"
     >
       <div className="mx-auto max-w-7xl flex items-center justify-between px-4 sm:px-6 h-16">
-        <Link href="/" className="flex items-center gap-1 text-xl font-bold text-primary">
+        <Link href="/" className="flex items-center gap-1.5 text-xl font-black">
           <span className="text-2xl">🐾</span>
-          <span>PetGo</span>
+          <span className="text-primary">PetGo</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">
-          <Link href="/search" className="text-sm font-medium text-gray-700 hover:text-primary transition-colors">
-            施設を探す
-          </Link>
-          <Link href="/features" className="text-sm font-medium text-gray-700 hover:text-primary transition-colors">
-            特集
-          </Link>
-          <Link href="/magazine" className="text-sm font-medium text-gray-700 hover:text-primary transition-colors">
-            PetGoマガジン
-          </Link>
+          {[
+            { href: "/search", label: "施設を探す" },
+            { href: "/features", label: "特集" },
+            { href: "/magazine", label: "PetGoマガジン" },
+          ].map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-sm font-bold transition-colors text-text-body hover:text-primary"
+            >
+              {link.label}
+            </Link>
+          ))}
         </nav>
 
         {loading ? (
           <div className="h-9 w-9 rounded-full bg-gray-200 animate-pulse" />
         ) : user ? (
-          <div className="relative flex items-center gap-2" ref={menuRef}>
-            <span className="hidden sm:inline-flex items-center gap-1 text-xs font-medium text-amber-600">
-              {totalPoints.toLocaleString()}pt
+          <div className="relative flex items-center gap-2.5" ref={menuRef}>
+            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-bold text-amber-700">
+              <span>🏆</span>
+              <span>保有ポイント</span>
+              <span>{totalPoints.toLocaleString()}</span>
             </span>
             {isPassMember && (
               <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-sm">
@@ -76,21 +73,21 @@ export function Header() {
                 <img
                   src={avatarUrl}
                   alt="アバター"
-                  className="h-9 w-9 rounded-full object-cover border-2 border-primary"
+                  className="h-9 w-9 rounded-full object-cover border-2 border-primary shadow-sm"
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold">
+                <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold shadow-sm">
                   {user.email?.charAt(0).toUpperCase()}
                 </div>
               )}
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 mt-2 w-48 rounded-xl bg-white shadow-lg ring-1 ring-black/5 py-1">
+              <div className="absolute right-0 top-full mt-2 w-52 rounded-2xl bg-white shadow-xl ring-1 ring-black/5 py-2">
                 <Link
                   href="/mypage"
-                  className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="block px-5 py-3 text-sm font-medium text-text-heading hover:bg-section-bg transition-colors"
                   onClick={() => setMenuOpen(false)}
                 >
                   マイページ
@@ -100,7 +97,7 @@ export function Header() {
                     signOut();
                     setMenuOpen(false);
                   }}
-                  className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="block w-full text-left px-5 py-3 text-sm font-medium text-text-heading hover:bg-section-bg transition-colors"
                 >
                   ログアウト
                 </button>
@@ -110,7 +107,7 @@ export function Header() {
         ) : (
           <button
             onClick={signInWithGoogle}
-            className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-white hover:bg-primary-light transition-colors"
+            className="rounded-xl px-5 py-2.5 text-sm font-bold transition-all bg-primary text-white hover:bg-primary-dark shadow-sm"
           >
             ログイン
           </button>

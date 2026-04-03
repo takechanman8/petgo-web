@@ -1,30 +1,89 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
+function formatNumber(n: number): string {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+function useCountUp(target: number, duration = 2000, suffix = "") {
+  const [current, setCurrent] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const hasRun = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasRun.current) {
+          hasRun.current = true;
+          const start = performance.now();
+          const animate = (now: number) => {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setCurrent(Math.round(eased * target));
+            if (progress < 1) requestAnimationFrame(animate);
+          };
+          requestAnimationFrame(animate);
+        }
+      },
+      { threshold: 0.5 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [target, duration, suffix]);
+
+  const value = formatNumber(current) + suffix;
+  return { value, ref };
+}
+
 export function HeroSection() {
   const tags = ["ドッグラン付き", "猫OK", "大型犬歓迎", "温泉"];
+
+  const stat1 = useCountUp(2400, 2000, "+");
+  const stat2 = useCountUp(15000, 2200, "+");
+  const stat3 = useCountUp(98, 1800, "%");
+
   const stats = [
-    { value: "2,400+", label: "掲載施設" },
-    { value: "15,000+", label: "レビュー" },
-    { value: "98%", label: "満足度" },
+    { ...stat1, label: "掲載施設" },
+    { ...stat2, label: "レビュー" },
+    { ...stat3, label: "満足度" },
   ];
 
   return (
-    <section className="relative bg-gradient-to-br from-primary-dark via-primary to-primary-light pt-28 pb-20 px-4 sm:px-6">
-      <div className="mx-auto max-w-4xl text-center">
-        <h1 className="text-3xl sm:text-5xl font-bold text-white leading-tight mb-4">
-          ペットと一緒に、どこへでも。
+    <section className="relative min-h-[70vh] flex items-center justify-center px-4 sm:px-6 pt-24 pb-12">
+      {/* Background image */}
+      <div className="absolute inset-0 z-0">
+        <img
+          src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1920&q=80"
+          alt=""
+          className="h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/60" />
+      </div>
+
+      <div className="relative z-10 mx-auto max-w-4xl w-full text-center">
+        {/* Catchcopy */}
+        <h1 className="text-[44px] sm:text-[52px] font-black text-white leading-[1.2] tracking-tight mb-4 drop-shadow-lg" style={{ color: 'white' }}>
+          ペットと一緒に、
+          <br className="sm:hidden" />
+          どこへでも。
         </h1>
-        <p className="text-green-100 text-base sm:text-lg mb-10">
-          ペット同伴OKの施設を簡単に検索・予約できるプラットフォーム
+        <p className="text-white text-base sm:text-lg mb-10 max-w-2xl mx-auto leading-relaxed drop-shadow-sm" style={{ color: 'white' }}>
+          2,400以上の施設から、あなたとペットにぴったりの場所を見つけよう
         </p>
 
-        {/* 検索ボックス */}
-        <div className="mx-auto max-w-3xl bg-white rounded-2xl shadow-xl p-4 sm:p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        {/* Search box */}
+        <div className="bg-white rounded-2xl p-6 shadow-xl max-w-3xl mx-auto">
+          <div className="flex flex-col sm:flex-row gap-3">
             <input
-              type="text"
-              placeholder="キーワードで検索..."
-              className="col-span-1 sm:col-span-2 rounded-lg border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              placeholder="エリア・施設名・キーワードで検索..."
+              className="flex-[2] px-4 py-3 border border-gray-200 rounded-xl text-[15px]"
             />
-            <select className="rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/40">
+            <select className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-[15px]">
               <option value="">施設タイプ</option>
               <option>ホテル・旅館</option>
               <option>カフェ・レストラン</option>
@@ -32,7 +91,7 @@ export function HeroSection() {
               <option>動物病院</option>
               <option>ペットサロン</option>
             </select>
-            <select className="rounded-lg border border-gray-200 px-4 py-3 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/40">
+            <select className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-[15px]">
               <option value="">ペットサイズ</option>
               <option>小型犬</option>
               <option>中型犬</option>
@@ -40,30 +99,32 @@ export function HeroSection() {
               <option>猫</option>
             </select>
           </div>
-          <button className="mt-4 w-full rounded-lg bg-accent px-6 py-3 text-sm font-bold text-white hover:bg-accent-dark transition-colors">
-            検索する
+          <button className="mt-3 w-full h-12 flex items-center justify-center gap-2 rounded-xl bg-[#FF6F00] text-white font-bold text-base hover:bg-[#E65100] transition-colors">
+            🔍 検索する
           </button>
         </div>
 
-        {/* 人気タグ */}
+        {/* Popular tags */}
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-          <span className="text-green-200 text-sm">人気：</span>
+          <span className="text-white/70 text-sm">人気：</span>
           {tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white hover:bg-white/30 cursor-pointer transition-colors"
+              className="rounded-full bg-white/15 backdrop-blur-sm px-4 py-1.5 text-sm font-medium text-white hover:bg-white/25 cursor-pointer transition-all border border-white/20"
             >
               {tag}
             </span>
           ))}
         </div>
 
-        {/* 統計 */}
-        <div className="mt-12 grid grid-cols-3 gap-6">
+        {/* Stats with count-up */}
+        <div className="mt-10 grid grid-cols-3 gap-6">
           {stats.map((stat) => (
-            <div key={stat.label}>
-              <div className="text-2xl sm:text-3xl font-bold text-white">{stat.value}</div>
-              <div className="text-green-200 text-sm mt-1">{stat.label}</div>
+            <div key={stat.label} ref={stat.ref} className="animate-count-in">
+              <div className="text-3xl sm:text-4xl font-black text-white tracking-tight drop-shadow-md">
+                {stat.value}
+              </div>
+              <div className="text-white/80 text-sm mt-1.5 font-medium drop-shadow-sm">{stat.label}</div>
             </div>
           ))}
         </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useFacilities } from "@/hooks/useFacilities";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
 import { FavoriteButton } from "@/components/favorite-button";
 import type { Facility } from "@/types/facility";
 
@@ -13,47 +14,42 @@ function StarRating({ rating, reviews }: { rating: number; reviews: number }) {
       {[1, 2, 3, 4, 5].map((star) => (
         <svg
           key={star}
-          className={`h-4 w-4 ${star <= Math.round(rating) ? "text-amber-400" : "text-gray-200"}`}
+          className="h-4 w-4"
+          style={{ color: star <= Math.round(rating) ? "#F9A825" : "#E0E0E0" }}
           fill="currentColor"
           viewBox="0 0 20 20"
         >
           <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
         </svg>
       ))}
-      <span className="ml-1 text-sm font-medium text-gray-700">{rating}</span>
-      <span className="text-xs text-gray-400">({reviews})</span>
+      <span className="ml-1 text-sm font-bold text-text-heading">{rating}</span>
+      <span className="text-xs text-text-muted">({reviews})</span>
     </div>
   );
 }
 
-function PetScore({ score }: { score: number }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-xs">🐾</span>
-      <div className="h-1.5 w-16 rounded-full bg-gray-100">
-        <div
-          className="h-1.5 rounded-full bg-primary"
-          style={{ width: `${score}%` }}
-        />
-      </div>
-      <span className="text-xs font-medium text-primary">{score}</span>
-    </div>
-  );
+function hasCoupon(facilityId: string): boolean {
+  let hash = 0;
+  for (let i = 0; i < facilityId.length; i++) {
+    hash = ((hash << 5) - hash + facilityId.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash) % 3 === 0;
 }
 
 export function FacilityGrid() {
   const { facilities, loading } = useFacilities();
   const { user, signInWithGoogle } = useAuth();
   const { favoriteIds, toggle } = useFavorites(user);
+  const { isPassMember } = useSubscription(user);
 
   return (
-    <section className="py-16 px-4 sm:px-6 bg-gray-50">
+    <section className="py-20 px-4 sm:px-6 bg-section-bg">
       <div className="mx-auto max-w-7xl">
-        <div className="text-center mb-10">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+        <div className="text-center mb-12">
+          <h2 className="text-h2 section-heading section-heading-center">
             人気の施設
           </h2>
-          <p className="mt-2 text-gray-500">
+          <p className="mt-5 text-text-body">
             ペットオーナーに選ばれている施設をチェック
           </p>
         </div>
@@ -61,8 +57,8 @@ export function FacilityGrid() {
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl overflow-hidden shadow-sm animate-pulse">
-                <div className="h-48 bg-gray-200" />
+              <div key={i} className="card animate-pulse">
+                <div className="aspect-[4/3] bg-gray-200" />
                 <div className="p-4 space-y-3">
                   <div className="h-4 bg-gray-200 rounded w-3/4" />
                   <div className="h-3 bg-gray-200 rounded w-1/2" />
@@ -73,10 +69,12 @@ export function FacilityGrid() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {facilities.map((facility) => (
+            {facilities.map((facility, index) => (
               <Link key={facility.id} href={`/facility/${facility.id}`} className="block">
                 <FacilityCard
                   facility={facility}
+                  rank={index + 1}
+                  isPassMember={isPassMember}
                   isFavorite={favoriteIds.has(facility.id)}
                   onToggleFavorite={() => toggle(facility.id)}
                   onLoginRequired={signInWithGoogle}
@@ -93,28 +91,72 @@ export function FacilityGrid() {
 
 function FacilityCard({
   facility,
+  rank,
+  isPassMember,
   isFavorite,
   onToggleFavorite,
   onLoginRequired,
   isLoggedIn,
 }: {
   facility: Facility;
+  rank: number;
+  isPassMember: boolean;
   isFavorite: boolean;
   onToggleFavorite: () => Promise<boolean>;
   onLoginRequired: () => void;
   isLoggedIn: boolean;
 }) {
+  const basePoints = Math.floor(facility.price * 0.01);
+  const earnedPoints = isPassMember ? basePoints * 2 : basePoints;
+
   return (
-    <article className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer">
-      <div className="relative h-48 overflow-hidden">
-        <img
-          src={facility.image}
-          alt={facility.name}
-          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-        />
-        <span className="absolute top-3 left-3 rounded-full bg-white/90 px-2.5 py-0.5 text-xs font-medium text-primary">
-          {facility.type}
-        </span>
+    <article className="card group cursor-pointer h-full flex flex-col">
+      <div className="relative aspect-[4/3] overflow-visible rounded-t-[16px]">
+        <div className="absolute inset-0 overflow-hidden rounded-t-[16px]">
+          <img
+            src={facility.image}
+            alt={facility.name}
+            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        </div>
+        {/* リボン型ランキングバッジ */}
+        {(() => {
+          const badgeColor = rank === 1 ? '#EAB308' : rank === 2 ? '#9CA3AF' : rank === 3 ? '#B45309' : '#1E1B4B';
+          return (
+            <div style={{ position: 'absolute', top: '-4px', left: '12px', zIndex: 10 }}>
+              <svg width="32" height="48" viewBox="0 0 32 48" fill="none">
+                <rect x="0" y="0" width="32" height="40" fill={badgeColor} />
+                <polygon points="0,40 16,48 32,40" fill={badgeColor} />
+              </svg>
+              <span style={{
+                position: 'absolute',
+                top: '8px',
+                left: '0',
+                width: '32px',
+                textAlign: 'center',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '14px',
+              }}>{rank}</span>
+            </div>
+          );
+        })()}
+        {hasCoupon(facility.id) && (
+          <span style={{
+            position: 'absolute',
+            bottom: '8px',
+            left: '8px',
+            backgroundColor: '#E53935',
+            color: 'white',
+            fontSize: '11px',
+            padding: '2px 8px',
+            borderRadius: '4px',
+            fontWeight: 'bold',
+            zIndex: 10,
+          }}>
+            クーポン対象
+          </span>
+        )}
         <div className="absolute top-3 right-3">
           <FavoriteButton
             isFavorite={isFavorite}
@@ -125,39 +167,44 @@ function FacilityCard({
         </div>
       </div>
 
-      <div className="p-4">
-        <h3 className="font-bold text-gray-900 line-clamp-1">
-          {facility.name}
-        </h3>
-        <p className="mt-1 text-xs text-gray-500">{facility.area}</p>
+      <div className="p-4 flex flex-col flex-1">
+        <div>
+          <h3 className="text-h3 text-[17px] line-clamp-1">
+            {facility.name}
+          </h3>
+          <p className="mt-1 text-xs text-text-muted">{facility.area}</p>
+        </div>
 
-        <div className="mt-2">
+        <div className="mt-3">
           <StarRating rating={facility.rating} reviews={facility.reviews} />
         </div>
 
-        <div className="mt-2">
-          <PetScore score={facility.petScore} />
-        </div>
-
-        <div className="mt-2 flex flex-wrap gap-1">
+        <div className="mt-3 flex flex-wrap gap-1.5">
           {facility.sizes.map((size) => (
             <span
               key={size}
-              className="rounded bg-green-50 px-1.5 py-0.5 text-[10px] text-primary font-medium"
+              className="rounded-md bg-primary/8 px-2 py-0.5 text-[11px] text-primary font-bold"
             >
               {size}
             </span>
           ))}
         </div>
 
-        <div className="mt-3 flex items-end justify-between border-t border-gray-100 pt-3">
-          <div>
-            <span className="text-lg font-bold text-gray-900">
-              ¥{facility.price.toLocaleString()}
+        <div className="mt-auto pt-4 border-t border-gray-100">
+          <div className="flex items-end justify-between">
+            <div>
+              <span className="text-xl font-black text-primary">
+                ¥{facility.price.toLocaleString()}
+              </span>
+              <span className="text-sm text-text-muted ml-0.5">〜</span>
+            </div>
+            <span className="text-xs text-accent font-bold group-hover:translate-x-1 transition-transform">
+              詳細を見る →
             </span>
-            <span className="text-xs text-gray-400">〜</span>
           </div>
-          <span className="text-xs text-accent font-medium">詳細を見る →</span>
+          <p className="mt-1.5 text-xs font-bold text-amber-600">
+            <span className="text-amber-600">🏆</span> +{earnedPoints.toLocaleString()}pt 獲得{isPassMember && "（PASS 2倍）"}
+          </p>
         </div>
       </div>
     </article>
