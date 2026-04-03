@@ -10,7 +10,7 @@ import type { Facility } from "@/types/facility";
 
 function StarRating({ rating, reviews }: { rating: number; reviews: number }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0">
       {[1, 2, 3, 4, 5].map((star) => (
         <svg
           key={star}
@@ -110,8 +110,30 @@ function FacilityCard({
   const earnedPoints = isPassMember ? basePoints * 2 : basePoints;
 
   return (
-    <article className="card group cursor-pointer h-full flex flex-col">
-      <div className="relative aspect-[4/3] overflow-visible rounded-t-[16px]">
+    <article className="card group cursor-pointer h-full flex flex-col" style={{ position: 'relative', overflow: 'visible' }}>
+      {/* リボン型ランキングバッジ - 画像の外に配置 */}
+      {(() => {
+        const badgeColor = rank === 1 ? '#EAB308' : rank === 2 ? '#9CA3AF' : rank === 3 ? '#B45309' : '#1E1B4B';
+        return (
+          <div style={{ position: 'absolute', top: -4, left: 12, zIndex: 10, width: 30, height: 44 }}>
+            <svg width="30" height="44" viewBox="0 0 30 44" style={{ position: 'absolute', top: 0, left: 0, display: 'block' }}>
+              <path d="M0 0 H30 V36 L15 44 L0 36 Z" fill={badgeColor} />
+            </svg>
+            <span style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              marginTop: '-4px',
+              color: 'white',
+              fontWeight: 'bold',
+              fontSize: 14,
+            }}>{rank}</span>
+          </div>
+        );
+      })()}
+
+      <div className="relative aspect-[4/3] overflow-hidden rounded-t-[16px]">
         <div className="absolute inset-0 overflow-hidden rounded-t-[16px]">
           <img
             src={facility.image}
@@ -119,32 +141,10 @@ function FacilityCard({
             className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
         </div>
-        {/* リボン型ランキングバッジ */}
-        {(() => {
-          const badgeColor = rank === 1 ? '#EAB308' : rank === 2 ? '#9CA3AF' : rank === 3 ? '#B45309' : '#1E1B4B';
-          return (
-            <div style={{ position: 'absolute', top: '-4px', left: '12px', zIndex: 10 }}>
-              <svg width="32" height="48" viewBox="0 0 32 48" fill="none">
-                <rect x="0" y="0" width="32" height="40" fill={badgeColor} />
-                <polygon points="0,40 16,48 32,40" fill={badgeColor} />
-              </svg>
-              <span style={{
-                position: 'absolute',
-                top: '8px',
-                left: '0',
-                width: '32px',
-                textAlign: 'center',
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: '14px',
-              }}>{rank}</span>
-            </div>
-          );
-        })()}
         {hasCoupon(facility.id) && (
           <span style={{
             position: 'absolute',
-            bottom: '8px',
+            bottom: '12px',
             left: '8px',
             backgroundColor: '#E53935',
             color: 'white',
@@ -179,7 +179,7 @@ function FacilityCard({
           <StarRating rating={facility.rating} reviews={facility.reviews} />
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div className="mt-3 pb-2 flex flex-wrap gap-1.5">
           {facility.sizes.map((size) => (
             <span
               key={size}
@@ -203,7 +203,7 @@ function FacilityCard({
             </span>
           </div>
           <p className="mt-1.5 text-xs font-bold text-amber-600">
-            <span className="text-amber-600">🏆</span> +{earnedPoints.toLocaleString()}pt 獲得{isPassMember && "（PASS 2倍）"}
+            +{earnedPoints.toLocaleString()}pt 獲得{isPassMember && "（PASS 2倍）"}
           </p>
         </div>
       </div>

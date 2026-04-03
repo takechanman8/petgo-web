@@ -56,7 +56,6 @@ export function Header() {
         ) : user ? (
           <div className="relative flex items-center gap-2.5" ref={menuRef}>
             <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-bold text-amber-700">
-              <span>🏆</span>
               <span>保有ポイント</span>
               <span>{totalPoints.toLocaleString()}</span>
             </span>

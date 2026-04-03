@@ -7,7 +7,7 @@ export function Footer() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-10 mb-12">
           <div className="col-span-2 sm:col-span-1">
             <Link href="/" className="flex items-center gap-1.5 text-xl font-black text-white">
-              <span className="text-2xl">🐾</span>
+              <span className="text-2xl" style={{ filter: 'brightness(0) invert(1)' }}>🐾</span>
               <span>PetGo</span>
             </Link>
             <p className="mt-4 text-sm leading-relaxed">

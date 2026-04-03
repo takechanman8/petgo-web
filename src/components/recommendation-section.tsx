@@ -9,7 +9,7 @@ import type { RecommendedFacility } from "@/hooks/useRecommendations";
 
 function StarRating({ rating, reviews }: { rating: number; reviews: number }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0">
       {[1, 2, 3, 4, 5].map((star) => (
         <svg
           key={star}
@@ -70,8 +70,8 @@ function RecommendedCard({
         {hasCoupon(facility.id) && (
           <span style={{
             position: 'absolute',
-            top: '48px',
-            right: '12px',
+            bottom: '12px',
+            left: '8px',
             backgroundColor: '#E53935',
             color: 'white',
             fontSize: '11px',
@@ -106,10 +106,8 @@ function RecommendedCard({
 
         {/* Recommendation reason */}
         {facility.reason && (
-          <div className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-100 px-3 py-2">
-            <svg className="h-4 w-4 text-accent shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" />
-            </svg>
+          <div className="mt-3 flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-100 px-3 py-2">
+            <span className="shrink-0" style={{ fontSize: '18px', lineHeight: 1 }}>🐾</span>
             <span className="text-xs text-amber-800 font-medium line-clamp-2">{facility.reason}</span>
           </div>
         )}

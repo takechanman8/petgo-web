@@ -84,7 +84,7 @@ function scoreFacility(
       profile.petSize === "large" ? "大型犬" :
       profile.petSize === "medium" ? "中型犬" : "小型犬";
     score += 2;
-    reasons.push(`${sizeLabel}OKの施設です`);
+    reasons.push(`${sizeLabel}OKの施設です！`);
   }
 
   // ペットフレンドリースコアが高い施設にボーナス

@@ -9,7 +9,7 @@ import type { Facility } from "@/types/facility";
 
 function StarRating({ rating, reviews }: { rating: number; reviews: number }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0">
       {[1, 2, 3, 4, 5].map((star) => (
         <svg
           key={star}
@@ -70,8 +70,8 @@ function WeekendCard({
         {hasCoupon(facility.id) && (
           <span style={{
             position: 'absolute',
-            top: '48px',
-            right: '12px',
+            bottom: '12px',
+            left: '8px',
             backgroundColor: '#E53935',
             color: 'white',
             fontSize: '11px',
@@ -142,14 +142,9 @@ export function WeekendPicks() {
     <section className="py-20 px-4 sm:px-6 bg-section-bg">
       <div className="mx-auto max-w-7xl">
         <div className="mb-10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-              <span className="text-xl">🗓</span>
-            </div>
-            <h2 className="text-h2 section-heading">
-              今週末のおすすめ
-            </h2>
-          </div>
+          <h2 className="text-h2 section-heading">
+            今週末のおすすめ
+          </h2>
           <p className="mt-5 text-text-body">
             週末のおでかけにぴったりの施設をご紹介
           </p>
