@@ -23,8 +23,6 @@ export function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const avatarUrl = user?.user_metadata?.avatar_url;
-
   return (
     <header
       className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm"
@@ -54,7 +52,7 @@ export function Header() {
         {loading ? (
           <div className="h-9 w-9 rounded-full bg-gray-200 animate-pulse" />
         ) : user ? (
-          <div className="relative flex items-center gap-2.5" ref={menuRef}>
+          <div className="relative flex items-center gap-4" ref={menuRef}>
             <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-bold text-amber-700">
               <span>保有ポイント</span>
               <span>{totalPoints.toLocaleString()}</span>
@@ -64,22 +62,33 @@ export function Header() {
                 PASS
               </span>
             )}
+            <Link
+              href="/mypage?tab=favorites"
+              className="hidden sm:flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="お気に入り"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            </Link>
+            <button
+              className="hidden sm:flex relative items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="お知らせ"
+              onClick={() => {}}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+            </button>
             <button
               onClick={() => setMenuOpen((prev) => !prev)}
-              className="flex items-center rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
             >
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt="アバター"
-                  className="h-9 w-9 rounded-full object-cover border-2 border-primary shadow-sm"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold shadow-sm">
-                  {user.email?.charAt(0).toUpperCase()}
-                </div>
-              )}
+              <span className="hidden sm:inline text-[13px] font-medium" style={{ color: "#555" }}>
+                {user.user_metadata?.full_name ? `${user.user_metadata.full_name}さん` : user.email?.split("@")[0]}
+              </span>
             </button>
 
             {menuOpen && (

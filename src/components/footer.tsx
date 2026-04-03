@@ -13,6 +13,19 @@ export function Footer() {
             <p className="mt-4 text-sm leading-relaxed">
               ペット同伴OKの施設を簡単に探せるレビュー＆予約プラットフォーム
             </p>
+            <a
+              href="https://instagram.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mt-4 text-white hover:text-gray-300 transition-colors"
+              aria-label="Instagram"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+              </svg>
+            </a>
           </div>
 
           <div>
@@ -29,7 +42,6 @@ export function Footer() {
             <h3 className="text-sm font-bold text-white mb-4">施設オーナー向け</h3>
             <ul className="space-y-2.5 text-sm">
               <li><Link href="/owner" className="hover:text-white transition-colors">施設を掲載する</Link></li>
-              <li><Link href="/owner/dashboard" className="hover:text-white transition-colors">管理ダッシュボード</Link></li>
               <li><Link href="/owner/pricing" className="hover:text-white transition-colors">料金プラン</Link></li>
             </ul>
           </div>
@@ -41,6 +53,7 @@ export function Footer() {
               <li><Link href="/terms" className="hover:text-white transition-colors">利用規約</Link></li>
               <li><Link href="/privacy" className="hover:text-white transition-colors">プライバシーポリシー</Link></li>
               <li><Link href="/contact" className="hover:text-white transition-colors">お問い合わせ</Link></li>
+              <li><Link href="/about" className="hover:text-white transition-colors">会社概要</Link></li>
             </ul>
           </div>
         </div>
