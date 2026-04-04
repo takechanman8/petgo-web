@@ -48,15 +48,28 @@ export function CarouselSection({
     };
   }, [updateArrows, loading, facilities]);
 
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   const scroll = (direction: "left" | "right") => {
     const el = scrollRef.current;
     if (!el) return;
-    const cardWidth = el.clientWidth / 4.5;
+    const cols = isMobile ? 2 : 4.5;
+    const cardWidth = el.clientWidth / cols;
     const scrollAmount = direction === "right" ? cardWidth * 2 : -(cardWidth * 2);
     el.scrollBy({ left: scrollAmount, behavior: "smooth" });
   };
 
-  const cardWidthStyle = "calc((100% - 48px) / 4.5)";
+  // Mobile: 2 cards visible, PC: 4.5 cards visible
+  const cardWidthStyle = isMobile
+    ? "calc((100% - 12px) / 2)"
+    : "calc((100% - 48px) / 4.5)";
 
   return (
     <section className={`py-12 px-4 sm:px-6 ${bgClass || ""}`}>
@@ -76,7 +89,7 @@ export function CarouselSection({
 
         <div className="relative">
           {loading ? (
-            <div className="flex gap-4 overflow-hidden">
+            <div className="flex gap-3 md:gap-4 overflow-hidden">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="flex-shrink-0" style={{ width: cardWidthStyle }}>
                   <CompactSkeletonCard />
@@ -88,7 +101,7 @@ export function CarouselSection({
               <div
                 ref={scrollRef}
                 onScroll={updateArrows}
-                className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory scrollbar-hide pb-4"
+                className="flex gap-3 md:gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory scrollbar-hide pb-4"
               >
                 {facilities.map((facility, index) => (
                   <div
