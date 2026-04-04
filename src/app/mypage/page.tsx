@@ -490,7 +490,6 @@ export default function MyPage() {
           <div className="mb-2 rounded-none bg-white p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-xl">👑</span>
                 <div>
                   <h2 className="font-bold text-gray-900">PetGo PASS</h2>
                   {subLoading ? (
@@ -539,8 +538,7 @@ export default function MyPage() {
 
           {/* Points Section */}
           <div className="mb-8 rounded-none bg-white p-4 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-50 text-base">🪙</span>
+            <div className="mb-2">
               <h2 className="font-bold text-gray-900 text-sm">ポイント</h2>
             </div>
 
@@ -669,7 +667,9 @@ export default function MyPage() {
                   <span className="text-sm font-bold text-gray-900">0件</span>
                 </div>
                 <div className="text-center py-12 px-4">
-                  <div className="text-4xl mb-3">💚</div>
+                  <svg className="mx-auto h-10 w-10 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                  </svg>
                   <p className="text-sm text-gray-500 mb-3">お気に入りの施設がまだありません</p>
                   <Link href="/" className="inline-block rounded-lg bg-primary px-5 py-2 text-xs font-bold text-white hover:bg-primary-light transition-colors">
                     施設を探す
