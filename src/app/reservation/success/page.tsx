@@ -92,9 +92,19 @@ function ReservationSuccessContent() {
         setStatus("error");
         setErrorMsg("予約の保存に失敗しました。お問い合わせください。");
       } else {
-        // ポイント付与
-        const { points } = await addBookingPoints(user!.id, Number(totalPrice), isPassMember, facilityId!);
-        setEarnedPoints(points);
+        // ポイント付与（重複チェック: 同じsession_idで既に付与済みか確認）
+        const { data: existingBonus } = await supabase
+          .from("point_history")
+          .select("id")
+          .eq("user_id", user!.id)
+          .eq("reason", "booking_bonus")
+          .eq("reference_id", facilityId)
+          .maybeSingle();
+
+        if (!existingBonus) {
+          const { points } = await addBookingPoints(user!.id, Number(totalPrice), isPassMember, facilityId!);
+          setEarnedPoints(points);
+        }
         setStatus("success");
       }
     }

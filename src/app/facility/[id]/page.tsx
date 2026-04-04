@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { Metadata } from "next";
 import { createServerClient } from "@/lib/supabase-server";
 import FacilityDetailClient from "./facility-detail-client";
@@ -8,7 +9,7 @@ type Props = {
   params: Promise<{ id: string }>;
 };
 
-async function getFacility(id: string) {
+const getFacility = cache(async (id: string) => {
   const supabase = createServerClient();
   const { data } = await supabase
     .from("facilities")
@@ -16,7 +17,7 @@ async function getFacility(id: string) {
     .eq("id", id)
     .single();
   return data;
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;

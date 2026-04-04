@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase";
-import { grantRegistrationBonus, grantReferralBonus } from "@/hooks/usePoints";
 import type { User } from "@supabase/supabase-js";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
+  const bonusCheckedRef = useRef(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -22,17 +22,17 @@ export function useAuth() {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
 
-      // 初回ログイン時の処理
-      if (event === "SIGNED_IN" && currentUser) {
-        // 会員登録ボーナス（重複チェックはgrantRegistrationBonus内で実施）
-        await grantRegistrationBonus(currentUser.id);
+      // 新規サインイン時のみ（セッション復元のINITIAL_SESSIONは除外）
+      // かつこのマウントで1回だけ実行
+      if (event === "SIGNED_IN" && currentUser && !bonusCheckedRef.current) {
+        bonusCheckedRef.current = true;
 
-        // 友達紹介チェック
+        // 友達紹介チェック（localStorageにrefコードがある場合のみ）
         try {
           const refCode = localStorage.getItem("petgo_ref");
           if (refCode) {
             localStorage.removeItem("petgo_ref");
-            // 紹介コードからユーザーIDを取得
+            const { grantReferralBonus } = await import("@/hooks/usePoints");
             const { data: referrer } = await supabase
               .from("user_settings")
               .select("user_id")
@@ -43,7 +43,7 @@ export function useAuth() {
             }
           }
         } catch {
-          // localStorage not available
+          // ignore
         }
       }
     });
@@ -52,7 +52,6 @@ export function useAuth() {
   }, []);
 
   const signInWithGoogle = async () => {
-    // 紹介コードをlocalStorageに保存してからログイン
     try {
       const url = new URL(window.location.href);
       const ref = url.searchParams.get("ref");

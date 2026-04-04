@@ -85,6 +85,7 @@ export default function MyPage() {
   const { favoriteIds, toggle } = useFavorites(user);
   const [cancellingPass, setCancellingPass] = useState(false);
   const [exchangingCoupon, setExchangingCoupon] = useState(false);
+  const [couponMessage, setCouponMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [reviews, setReviews] = useState<UserReview[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -249,10 +250,16 @@ export default function MyPage() {
       }
     }
     loadSettings();
+  }, [user, fetchPets]);
 
-    // Birthday bonus check
-    async function checkBirthdayBonus() {
-      if (!user) return;
+  // Birthday pets check (display only, no auto-grant)
+  const [birthdayClaimable, setBirthdayClaimable] = useState(false);
+  const [claimingBirthday, setClaimingBirthday] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    const supabase = createClient();
+
+    async function checkBirthdayPets() {
       const now = new Date();
       const currentMonth = now.getMonth() + 1;
       const currentYear = now.getFullYear();
@@ -260,55 +267,94 @@ export default function MyPage() {
       const { data: petsData } = await supabase
         .from("pets")
         .select("id, name, birth_month")
-        .eq("user_id", user.id);
+        .eq("user_id", user!.id);
 
       if (!petsData) return;
 
-      const bdayPets = petsData.filter((p) => p.birth_month === currentMonth);
+      const bdayPets = petsData.filter((p: { birth_month: number | null }) => p.birth_month === currentMonth);
       if (bdayPets.length === 0) return;
 
-      setBirthdayPets(bdayPets.map((p) => p.name));
+      setBirthdayPets(bdayPets.map((p: { name: string }) => p.name));
 
-      // Check if already granted this year for each pet
+      // Check if any birthday bonus is unclaimed this year
+      let hasUnclaimed = false;
       for (const pet of bdayPets) {
-        const refId = `birthday_${pet.id}_${currentYear}`;
+        const refId = `birthday_${(pet as { id: string }).id}_${currentYear}`;
         const { data: existing } = await supabase
           .from("point_history")
           .select("id")
-          .eq("user_id", user.id)
+          .eq("user_id", user!.id)
           .eq("reason", "birthday_bonus")
           .eq("reference_id", refId)
           .maybeSingle();
-
         if (!existing) {
-          // Grant 200 points
-          await supabase.from("point_history").insert({
-            user_id: user.id,
-            points: 200,
-            type: "earned",
-            reason: "birthday_bonus",
-            reference_id: refId,
-          });
-          // Update total
-          const { data: pts } = await supabase
-            .from("user_points")
-            .select("total_points")
-            .eq("user_id", user.id)
-            .maybeSingle();
-          if (pts) {
-            await supabase
-              .from("user_points")
-              .update({ total_points: pts.total_points + 200 })
-              .eq("user_id", user.id);
-          } else {
-            await supabase.from("user_points").insert({ user_id: user.id, total_points: 200 });
-          }
-          refetchPoints();
+          hasUnclaimed = true;
+          break;
         }
       }
+      setBirthdayClaimable(hasUnclaimed);
     }
-    checkBirthdayBonus();
-  }, [user, fetchPets, refetchPoints]);
+    checkBirthdayPets();
+  }, [user]);
+
+  const handleClaimBirthdayBonus = async () => {
+    if (!user || claimingBirthday) return;
+    setClaimingBirthday(true);
+    const supabase = createClient();
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+
+    const { data: petsData } = await supabase
+      .from("pets")
+      .select("id, name, birth_month")
+      .eq("user_id", user.id);
+
+    if (!petsData) { setClaimingBirthday(false); return; }
+
+    const bdayPets = petsData.filter((p: { birth_month: number | null }) => p.birth_month === currentMonth);
+    let granted = false;
+
+    for (const pet of bdayPets) {
+      const refId = `birthday_${(pet as { id: string }).id}_${currentYear}`;
+      // DB重複チェック
+      const { data: existing } = await supabase
+        .from("point_history")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("reason", "birthday_bonus")
+        .eq("reference_id", refId)
+        .maybeSingle();
+
+      if (existing) continue;
+
+      await supabase.from("point_history").insert({
+        user_id: user.id,
+        points: 200,
+        type: "earned",
+        reason: "birthday_bonus",
+        reference_id: refId,
+      });
+      const { data: pts } = await supabase
+        .from("user_points")
+        .select("total_points")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (pts) {
+        await supabase
+          .from("user_points")
+          .update({ total_points: pts.total_points + 200 })
+          .eq("user_id", user.id);
+      } else {
+        await supabase.from("user_points").insert({ user_id: user.id, total_points: 200 });
+      }
+      granted = true;
+    }
+
+    if (granted) refetchPoints();
+    setBirthdayClaimable(false);
+    setClaimingBirthday(false);
+  };
 
   const handleSavePet = async () => {
     if (!user || !editingPet || !editingPet.name.trim()) return;
@@ -633,14 +679,18 @@ export default function MyPage() {
                   </div>
                   <button
                     onClick={async () => {
-                      if (totalPoints < 500) return;
+                      setCouponMessage(null);
+                      if (totalPoints < 500) {
+                        setCouponMessage({ type: "error", text: "ポイントが不足しています" });
+                        return;
+                      }
                       if (!confirm("500ポイントを500円OFFクーポンに交換しますか？")) return;
                       setExchangingCoupon(true);
                       const { error } = await usePointsForCoupon(user!.id, 500);
                       if (error) {
-                        alert(`エラー: ${error}`);
+                        setCouponMessage({ type: "error", text: error });
                       } else {
-                        alert("500円OFFクーポンを獲得しました！次回予約時に自動適用されます。");
+                        setCouponMessage({ type: "success", text: "500円OFFクーポンを獲得しました！" });
                         refetchPoints();
                       }
                       setExchangingCoupon(false);
@@ -656,11 +706,34 @@ export default function MyPage() {
                   </button>
                 </div>
 
+                {couponMessage && (
+                  <div className={`rounded-lg px-3 py-2 mb-2 text-xs font-medium ${
+                    couponMessage.type === "error"
+                      ? "bg-red-50 text-red-600 border border-red-200"
+                      : "bg-green-50 text-green-700 border border-green-200"
+                  }`}>
+                    {couponMessage.text}
+                  </div>
+                )}
+
                 {birthdayPets.length > 0 && (
                   <div className="rounded-lg bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 px-4 py-2.5 mb-2">
-                    <p className="text-xs font-bold text-orange-700">
-                      🎂 今月は{birthdayPets.map((n) => petChan(n)).join("・")}のお誕生日月！+200ptプレゼント
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold text-orange-700">
+                        🎂 今月は{birthdayPets.map((n) => petChan(n)).join("・")}のお誕生日月！
+                      </p>
+                      {birthdayClaimable ? (
+                        <button
+                          onClick={handleClaimBirthdayBonus}
+                          disabled={claimingBirthday}
+                          className="ml-2 shrink-0 rounded-full bg-orange-500 px-3 py-1 text-[10px] font-bold text-white hover:bg-orange-600 disabled:opacity-50 transition-colors"
+                        >
+                          {claimingBirthday ? "処理中..." : "+200pt 受け取る"}
+                        </button>
+                      ) : (
+                        <span className="ml-2 shrink-0 text-[10px] text-orange-500 font-medium">受取済み</span>
+                      )}
+                    </div>
                   </div>
                 )}
 

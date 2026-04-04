@@ -178,6 +178,7 @@ export async function usePointsForCoupon(
 ): Promise<{ error: string | null }> {
   const supabase = createClient();
 
+  // Fetch latest balance
   const { data } = await supabase
     .from("user_points")
     .select("total_points")
@@ -188,6 +189,19 @@ export async function usePointsForCoupon(
     return { error: "ポイントが不足しています" };
   }
 
+  // Update with gte guard to prevent negative balance (race condition safe)
+  const { data: updated, error: updateError } = await supabase
+    .from("user_points")
+    .update({ total_points: data.total_points - pointsToUse })
+    .eq("user_id", userId)
+    .gte("total_points", pointsToUse)
+    .select("user_id")
+    .maybeSingle();
+
+  if (updateError) return { error: updateError.message };
+  if (!updated) return { error: "ポイントが不足しています" };
+
+  // Only insert history after successful balance update
   const { error: historyError } = await supabase.from("point_history").insert({
     user_id: userId,
     points: pointsToUse,
@@ -195,14 +209,14 @@ export async function usePointsForCoupon(
     reason: "coupon_used",
   });
 
-  if (historyError) return { error: historyError.message };
-
-  const { error } = await supabase
-    .from("user_points")
-    .update({ total_points: data.total_points - pointsToUse })
-    .eq("user_id", userId);
-
-  if (error) return { error: error.message };
+  if (historyError) {
+    // Rollback: restore balance
+    await supabase
+      .from("user_points")
+      .update({ total_points: data.total_points })
+      .eq("user_id", userId);
+    return { error: historyError.message };
+  }
 
   return { error: null };
 }

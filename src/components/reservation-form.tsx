@@ -113,6 +113,13 @@ export function ReservationForm({
       setError(`この施設は${maxPets}頭までです`);
       return;
     }
+    if (usePointDiscount && pointDiscount > 0) {
+      const pointsToUse = Math.ceil(pointDiscount / 500) * 500;
+      if (pointsToUse > totalPoints) {
+        setError("ポイントが不足しています");
+        return;
+      }
+    }
 
     setLoading(true);
     try {
