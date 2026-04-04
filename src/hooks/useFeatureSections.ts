@@ -320,7 +320,7 @@ export function useSpringPicks() {
         const { data } = await supabase
           .from("facilities")
           .select("*, reviews(rating)")
-          .in("type", ["cafe", "park", "restaurant"])
+          .in("type", ["カフェ", "ドッグラン", "レストラン"])
           .order("pet_friendly_score", { ascending: false })
           .limit(8);
 
@@ -420,7 +420,7 @@ export function useDogRunFacilities() {
         const { data } = await supabase
           .from("facilities")
           .select("*, reviews(rating)")
-          .or("type.eq.dog_run,features.cs.{dog_run}")
+          .or("type.eq.ドッグラン,features.cs.{ドッグラン}")
           .order("pet_friendly_score", { ascending: false })
           .limit(8);
 
@@ -510,11 +510,10 @@ export function useDogSizeFacilities(size: "small" | "medium" | "large") {
 
     async function doFetch() {
       try {
-        const col = `dog_size_${size}`;
         const { data } = await supabase
           .from("facilities")
           .select("*, reviews(rating)")
-          .eq(col, true)
+          .contains("accepted_dog_sizes", [size])
           .order("pet_friendly_score", { ascending: false })
           .limit(8);
 
