@@ -5,6 +5,15 @@ import { createClient } from "@/lib/supabase";
 import { addReviewPoints } from "@/hooks/usePoints";
 import type { User } from "@supabase/supabase-js";
 
+const DETAIL_CATEGORIES = [
+  { key: "rating_pet_friendly", label: "ペット対応", desc: "スタッフの対応、ペット向けアメニティの充実度" },
+  { key: "rating_cleanliness", label: "清潔感・設備", desc: "施設の清潔さ、設備の充実度" },
+  { key: "rating_service", label: "サービス・接客", desc: "スタッフの対応、おもてなし" },
+  { key: "rating_cost_performance", label: "コストパフォーマンス", desc: "価格に対する満足度" },
+] as const;
+
+type DetailKey = (typeof DETAIL_CATEGORIES)[number]["key"];
+
 interface ReviewModalProps {
   facilityId: string;
   user: User;
@@ -22,6 +31,18 @@ export function ReviewModal({
 }: ReviewModalProps) {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
+  const [detailRatings, setDetailRatings] = useState<Record<DetailKey, number>>({
+    rating_pet_friendly: 0,
+    rating_cleanliness: 0,
+    rating_service: 0,
+    rating_cost_performance: 0,
+  });
+  const [detailHover, setDetailHover] = useState<Record<DetailKey, number>>({
+    rating_pet_friendly: 0,
+    rating_cleanliness: 0,
+    rating_service: 0,
+    rating_cost_performance: 0,
+  });
   const [petType, setPetType] = useState<"犬" | "猫">("犬");
   const [petBreed, setPetBreed] = useState("");
   const [petSize, setPetSize] = useState<"small" | "medium" | "large">("small");
@@ -86,13 +107,16 @@ export function ReviewModal({
         pet_breed: petBreed || null,
         pet_size: petSize,
         rating,
+        rating_pet_friendly: detailRatings.rating_pet_friendly || null,
+        rating_cleanliness: detailRatings.rating_cleanliness || null,
+        rating_service: detailRatings.rating_service || null,
+        rating_cost_performance: detailRatings.rating_cost_performance || null,
         comment: comment || null,
         photo_url: photoUrl,
       });
 
       if (insertError) throw insertError;
 
-      // ポイント付与
       const { points } = await addReviewPoints(user.id, isPassMember, facilityId);
       setEarnedPoints(points);
 
@@ -134,10 +158,10 @@ export function ReviewModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5 p-6">
-          {/* 星評価 */}
+          {/* 総合評価 */}
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-700">
-              評価 <span className="text-red-500">*</span>
+              総合評価 <span className="text-red-500">*</span>
             </label>
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((star) => (
@@ -160,6 +184,48 @@ export function ReviewModal({
                   </svg>
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* 詳細評価（任意） */}
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700">
+              詳細評価 <span className="text-xs text-gray-400 font-normal">（任意）</span>
+            </label>
+            <div className="rounded-lg border border-gray-100 divide-y divide-gray-100">
+              {DETAIL_CATEGORIES.map((cat) => {
+                const display = detailHover[cat.key] || detailRatings[cat.key];
+                return (
+                  <div key={cat.key} className="flex items-center justify-between px-3 py-2.5">
+                    <div>
+                      <p className="text-sm text-gray-700">{cat.label}</p>
+                      <p className="text-[10px] text-gray-400">{cat.desc}</p>
+                    </div>
+                    <div className="flex gap-0.5 shrink-0 ml-3">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setDetailRatings((prev) => ({ ...prev, [cat.key]: prev[cat.key] === star ? 0 : star }))}
+                          onMouseEnter={() => setDetailHover((prev) => ({ ...prev, [cat.key]: star }))}
+                          onMouseLeave={() => setDetailHover((prev) => ({ ...prev, [cat.key]: 0 }))}
+                          className="p-0"
+                        >
+                          <svg
+                            className={`h-5 w-5 transition-colors ${
+                              star <= display ? "text-amber-400" : "text-gray-200"
+                            }`}
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

@@ -275,8 +275,18 @@ function FacilityForm({ userId, editingId, onClose }: FacilityFormProps) {
       });
   }, [editingId]);
 
+  const [formError, setFormError] = useState("");
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setFormError("");
+
+    if (form.description.length > 0 && form.description.length < 100) {
+      setFormError("紹介文は100文字以上で入力してください");
+      setSaving(false);
+      return;
+    }
+
     setSaving(true);
 
     const supabase = createClient();
@@ -413,13 +423,22 @@ function FacilityForm({ userId, editingId, onClose }: FacilityFormProps) {
           </label>
           <textarea
             value={form.description}
-            onChange={(e) =>
-              setForm({ ...form, description: e.target.value })
-            }
-            rows={3}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none"
-            placeholder="施設の説明を入力してください"
+            onChange={(e) => {
+              setForm({ ...form, description: e.target.value });
+              if (formError) setFormError("");
+            }}
+            rows={5}
+            className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none ${
+              formError && form.description.length < 100 ? "border-red-300" : "border-gray-300"
+            }`}
+            placeholder="施設の説明を入力してください（100文字以上）"
           />
+          <div className="flex justify-between mt-1">
+            <span className={`text-xs ${form.description.length > 0 && form.description.length < 100 ? "text-red-500" : "text-gray-400"}`}>
+              {form.description.length}/100文字以上
+            </span>
+            {formError && <span className="text-xs text-red-500">{formError}</span>}
+          </div>
         </div>
 
         {/* Photo URL & Price */}

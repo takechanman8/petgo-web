@@ -41,10 +41,21 @@ interface ReviewData {
   pet_breed: string | null;
   pet_size: string | null;
   rating: number;
+  rating_pet_friendly: number | null;
+  rating_cleanliness: number | null;
+  rating_service: number | null;
+  rating_cost_performance: number | null;
   comment: string;
   photo_url: string | null;
   created_at: string;
 }
+
+const DETAIL_RATING_LABELS: { key: keyof Pick<ReviewData, "rating_pet_friendly" | "rating_cleanliness" | "rating_service" | "rating_cost_performance">; label: string }[] = [
+  { key: "rating_pet_friendly", label: "ペット対応" },
+  { key: "rating_cleanliness", label: "清潔感・設備" },
+  { key: "rating_service", label: "サービス" },
+  { key: "rating_cost_performance", label: "コスパ" },
+];
 
 // --- Size labels ---
 const SIZE_LABELS: Record<string, string> = {
@@ -259,8 +270,9 @@ export default function FacilityDetailClient({
   // User pets
   const [userPets, setUserPets] = useState<UserPet[]>([]);
 
-  // Plan filter
+  // Plan filter & selection
   const [planSizeFilter, setPlanSizeFilter] = useState("all");
+  const [selectedPlan, setSelectedPlan] = useState<{ name: string; price: number } | null>(null);
 
   // Section 7: Category photo gallery
   const [photoCat, setPhotoCat] = useState<string>("すべて");
@@ -331,7 +343,7 @@ export default function FacilityDetailClient({
       try {
         const { data, error } = await supabase
           .from("reviews")
-          .select("id, user_name, pet_type, pet_breed, pet_size, rating, comment, photo_url, created_at")
+          .select("id, user_name, pet_type, pet_breed, pet_size, rating, rating_pet_friendly, rating_cleanliness, rating_service, rating_cost_performance, comment, photo_url, created_at")
           .eq("facility_id", id)
           .order("created_at", { ascending: false });
         if (error) throw error;
@@ -616,30 +628,46 @@ export default function FacilityDetailClient({
                     <div className="space-y-3">
                       {getSamplePlans(facilityRaw.type, facility.price)
                         .filter((p) => planSizeFilter === "all" || p.sizes.includes(planSizeFilter))
-                        .map((plan) => (
-                          <div key={plan.name} className={`rounded-lg border p-4 ${plan.passOnly ? "border-orange-200 bg-orange-50/30" : "border-gray-200"}`}>
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-bold text-sm text-gray-900">{plan.name}</h3>
-                                  {plan.passOnly && (
-                                    <span className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-2 py-0.5 text-[10px] font-bold text-white">PASS限定</span>
-                                  )}
+                        .map((plan) => {
+                          const isSelected = selectedPlan?.name === plan.name;
+                          return (
+                            <div
+                              key={plan.name}
+                              onClick={() => setSelectedPlan({ name: plan.name, price: plan.price })}
+                              className={`rounded-lg border p-4 cursor-pointer transition-all ${
+                                isSelected
+                                  ? "border-orange-400 ring-2 ring-orange-200 bg-orange-50/40"
+                                  : plan.passOnly
+                                    ? "border-orange-200 bg-orange-50/30 hover:border-orange-300"
+                                    : "border-gray-200 hover:border-gray-300"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="font-bold text-sm text-gray-900">{plan.name}</h3>
+                                    {plan.passOnly && (
+                                      <span className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-2 py-0.5 text-[10px] font-bold text-white">PASS限定</span>
+                                    )}
+                                    {isSelected && (
+                                      <span className="rounded-full bg-orange-500 px-2 py-0.5 text-[10px] font-bold text-white">選択中</span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1">{plan.desc}</p>
+                                  <div className="flex gap-1 mt-2">
+                                    {plan.sizes.map((s) => (
+                                      <span key={s} className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">{s}</span>
+                                    ))}
+                                  </div>
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">{plan.desc}</p>
-                                <div className="flex gap-1 mt-2">
-                                  {plan.sizes.map((s) => (
-                                    <span key={s} className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">{s}</span>
-                                  ))}
+                                <div className="text-right shrink-0">
+                                  <p className="text-lg font-bold text-gray-900">¥{plan.price.toLocaleString()}</p>
+                                  <p className="text-[10px] text-gray-400">〜</p>
                                 </div>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <p className="text-lg font-bold text-gray-900">¥{plan.price.toLocaleString()}</p>
-                                <p className="text-[10px] text-gray-400">〜</p>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                     </div>
                   </div>
 
@@ -772,8 +800,18 @@ export default function FacilityDetailClient({
                       )}
                     </div>
 
+                    {selectedPlan && (
+                      <div className="bg-orange-50 rounded-xl border border-orange-200 p-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] text-orange-500 font-medium">選択中のプラン</p>
+                          <p className="text-sm font-bold text-gray-900">{selectedPlan.name}</p>
+                        </div>
+                        <p className="text-lg font-bold text-gray-900">¥{selectedPlan.price.toLocaleString()}</p>
+                      </div>
+                    )}
+
                     <ReservationForm
-                      facility={facility}
+                      facility={selectedPlan ? { ...facility, price: selectedPlan.price } : facility}
                       acceptedSizes={facilityRaw.accepted_dog_sizes}
                       catOk={facilityRaw.cat_ok}
                       maxPets={facilityRaw.type === "宿泊" ? 2 : facilityRaw.type === "カフェ" || facilityRaw.type === "レストラン" ? 1 : 5}
@@ -812,12 +850,12 @@ export default function FacilityDetailClient({
                   </div>
                 )}
 
-                {/* Rating overview */}
+                {/* Rating overview (Ikyu-style) */}
                 {!reviewsLoading && reviews.length > 0 && (
                   <div className="bg-white rounded-xl shadow-sm p-5">
                     <div className="flex flex-col sm:flex-row gap-6">
                       {/* Big rating number */}
-                      <div className="flex flex-col items-center justify-center">
+                      <div className="flex flex-col items-center justify-center shrink-0">
                         <span className="text-5xl font-bold text-gray-900">{getAverageRating()}</span>
                         <div className="flex items-center gap-0.5 mt-1">
                           {[1, 2, 3, 4, 5].map((star) => (
@@ -829,28 +867,53 @@ export default function FacilityDetailClient({
                         <span className="text-xs text-gray-400 mt-1">{reviews.length}件のレビュー</span>
                       </div>
 
-                      {/* Rating distribution bars */}
-                      <div className="flex-1 space-y-1.5">
-                        {[5, 4, 3, 2, 1].map((star) => {
-                          const dist = getRatingDistribution();
-                          const count = dist[star - 1];
-                          const maxCount = Math.max(...dist, 1);
-                          return (
-                            <div key={star} className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500 w-4 text-right">{star}</span>
-                              <svg className="h-3 w-3 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                              </svg>
-                              <div className="flex-1 h-2 rounded-full bg-gray-100">
-                                <div
-                                  className="h-2 rounded-full bg-amber-400 transition-all"
-                                  style={{ width: `${(count / maxCount) * 100}%` }}
-                                />
+                      <div className="flex-1 space-y-4">
+                        {/* Detail rating averages */}
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                          {DETAIL_RATING_LABELS.map(({ key, label }) => {
+                            const rated = reviews.filter((r) => r[key] != null && r[key]! > 0);
+                            const avg = rated.length > 0
+                              ? Math.round((rated.reduce((s, r) => s + (r[key] ?? 0), 0) / rated.length) * 10) / 10
+                              : 0;
+                            return (
+                              <div key={key} className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500 w-20 shrink-0">{label}</span>
+                                <div className="flex items-center gap-0.5">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <svg key={star} className={`h-3 w-3 ${star <= Math.round(avg) ? "text-amber-400" : "text-gray-200"}`} fill="currentColor" viewBox="0 0 20 20">
+                                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
+                                  ))}
+                                </div>
+                                <span className="text-xs font-bold text-gray-700 w-6">{avg > 0 ? avg : "-"}</span>
                               </div>
-                              <span className="text-xs text-gray-400 w-6">{count}</span>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
+
+                        {/* Rating distribution bars */}
+                        <div className="space-y-1.5">
+                          {[5, 4, 3, 2, 1].map((star) => {
+                            const dist = getRatingDistribution();
+                            const count = dist[star - 1];
+                            const maxCount = Math.max(...dist, 1);
+                            return (
+                              <div key={star} className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500 w-4 text-right">{star}</span>
+                                <svg className="h-3 w-3 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                <div className="flex-1 h-2 rounded-full bg-gray-100">
+                                  <div
+                                    className="h-2 rounded-full bg-amber-400 transition-all"
+                                    style={{ width: `${(count / maxCount) * 100}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs text-gray-400 w-6">{count}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -880,9 +943,15 @@ export default function FacilityDetailClient({
                 </div>
 
                 {/* Personalized label */}
-                {user && userPets.length > 0 && reviewFilter !== "all" && (
+                {reviewFilter !== "all" && (
                   <p className="text-sm text-primary font-medium">
-                    あなたと同じ{reviewFilter === "cat" ? "猫" : SIZE_LABELS[reviewFilter] ?? ""}オーナーの声
+                    {(() => {
+                      const filterLabel = reviewFilter === "cat" ? "猫" : SIZE_LABELS[reviewFilter] ?? "";
+                      const isMyPetMatch = user && userPets.length > 0 && userPets.some((pet) =>
+                        reviewFilter === "cat" ? pet.type === "猫" : pet.size === reviewFilter
+                      );
+                      return isMyPetMatch ? `あなたと同じ${filterLabel}オーナーの声` : `${filterLabel}オーナーの声`;
+                    })()}
                   </p>
                 )}
 
