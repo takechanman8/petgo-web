@@ -6,9 +6,15 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
-import { addBookingPoints } from "@/hooks/usePoints";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+
+function generateReservationCode(): string {
+  const date = new Date();
+  const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
+  const seq = String(Math.floor(Math.random() * 999) + 1).padStart(3, "0");
+  return `PG-${datePart}-${seq}`;
+}
 
 export default function ReservationSuccessPage() {
   return (
@@ -38,7 +44,9 @@ function ReservationSuccessContent() {
   const { user, loading: authLoading } = useAuth();
   const { isPassMember, loading: subLoading } = useSubscription(user);
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
-  const [earnedPoints, setEarnedPoints] = useState(0);
+  const [expectedPoints, setExpectedPoints] = useState(0);
+  const [reservationCode, setReservationCode] = useState("");
+  const [facilityName, setFacilityName] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const savedRef = useRef(false);
 
@@ -63,17 +71,31 @@ function ReservationSuccessContent() {
     async function saveReservation() {
       const supabase = createClient();
 
-      // 重複チェック（同じstripe_session_idが既に存在しないか）
+      // Fetch facility name
+      const { data: facilityData } = await supabase
+        .from("facilities")
+        .select("name")
+        .eq("id", facilityId)
+        .maybeSingle();
+      if (facilityData) setFacilityName(facilityData.name);
+
+      // Check for existing reservation (duplicate)
       const { data: existing } = await supabase
         .from("reservations")
-        .select("id")
+        .select("id, reservation_code")
         .eq("stripe_session_id", sessionId)
         .maybeSingle();
 
       if (existing) {
+        setReservationCode(existing.reservation_code || "");
+        // Calculate expected points for display
+        const basePoints = Math.max(1, Math.round(Number(totalPrice) * 0.01));
+        setExpectedPoints(isPassMember ? basePoints * 2 : basePoints);
         setStatus("success");
         return;
       }
+
+      const code = generateReservationCode();
 
       const { error } = await supabase.from("reservations").insert({
         facility_id: facilityId,
@@ -85,6 +107,8 @@ function ReservationSuccessContent() {
         total_price: Number(totalPrice),
         status: "confirmed",
         stripe_session_id: sessionId,
+        reservation_code: code,
+        points_granted: false,
       });
 
       if (error) {
@@ -92,19 +116,10 @@ function ReservationSuccessContent() {
         setStatus("error");
         setErrorMsg("予約の保存に失敗しました。お問い合わせください。");
       } else {
-        // ポイント付与（重複チェック: 同じsession_idで既に付与済みか確認）
-        const { data: existingBonus } = await supabase
-          .from("point_history")
-          .select("id")
-          .eq("user_id", user!.id)
-          .eq("reason", "booking_bonus")
-          .eq("reference_id", facilityId)
-          .maybeSingle();
-
-        if (!existingBonus) {
-          const { points } = await addBookingPoints(user!.id, Number(totalPrice), isPassMember, facilityId!);
-          setEarnedPoints(points);
-        }
+        setReservationCode(code);
+        // Calculate expected points (not granted yet - deferred until checkout+1)
+        const basePoints = Math.max(1, Math.round(Number(totalPrice) * 0.01));
+        setExpectedPoints(isPassMember ? basePoints * 2 : basePoints);
         setStatus("success");
       }
     }
@@ -145,6 +160,23 @@ function ReservationSuccessContent() {
 
               <div className="rounded-xl bg-white p-6 shadow-sm text-left space-y-3">
                 <h2 className="font-bold text-gray-900">予約詳細</h2>
+
+                {/* Reservation Code */}
+                {reservationCode && (
+                  <div className="rounded-lg bg-gray-50 px-4 py-2.5">
+                    <p className="text-xs text-gray-500">予約ID</p>
+                    <p className="text-base font-bold text-gray-900 font-mono tracking-wide">{reservationCode}</p>
+                  </div>
+                )}
+
+                {/* Facility Name */}
+                {facilityName && (
+                  <div>
+                    <p className="text-xs text-gray-500">施設名</p>
+                    <p className="text-lg font-bold text-gray-900">{facilityName}</p>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <p className="text-gray-500">チェックイン</p>
@@ -173,13 +205,16 @@ function ReservationSuccessContent() {
                 </div>
               </div>
 
-              {earnedPoints > 0 && (
+              {expectedPoints > 0 && (
                 <div className="rounded-xl bg-amber-50 border border-amber-200 p-4">
                   <p className="text-sm font-bold text-amber-700">
-                    🎉 +{earnedPoints}ポイント獲得！
+                    🎉 +{expectedPoints}ポイント獲得予定
                     {isPassMember && (
                       <span className="ml-2 text-xs font-normal text-amber-600">（PASS会員2倍ボーナス）</span>
                     )}
+                  </p>
+                  <p className="mt-1 text-[11px] text-amber-600">
+                    ※ポイントはご利用日の翌日に付与されます
                   </p>
                 </div>
               )}
