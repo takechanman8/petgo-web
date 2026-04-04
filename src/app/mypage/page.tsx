@@ -550,24 +550,25 @@ export default function MyPage() {
           )}
 
           {/* PetGo PASS Section */}
-          <div className="mb-2 rounded-none bg-white p-5 shadow-sm border border-gray-100">
+          <div className={`mb-2 rounded-none bg-white p-5 shadow-sm border border-gray-100 ${!isPassMember && !subLoading ? "border-l-4 border-l-orange-400" : ""}`}>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div>
-                  <h2 className="font-bold text-gray-900">PetGo PASS</h2>
-                  {subLoading ? (
-                    <div className="mt-1 h-4 w-32 rounded bg-gray-200 animate-pulse" />
-                  ) : isPassMember && subscription ? (
-                    <p className="text-sm text-gray-500">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-2 py-0.5 text-xs font-bold text-white mr-2">
-                        PASS
-                      </span>
-                      次回更新日: {new Date(subscription.current_period_end).toLocaleDateString("ja-JP")}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-gray-500">未加入</p>
-                  )}
-                </div>
+              <div>
+                <h2 className="font-bold text-gray-900">PetGo PASS</h2>
+                {subLoading ? (
+                  <div className="mt-1 h-4 w-32 rounded bg-gray-200 animate-pulse" />
+                ) : isPassMember && subscription ? (
+                  <p className="text-sm text-gray-500">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-2 py-0.5 text-xs font-bold text-white mr-2">
+                      PASS
+                    </span>
+                    次回更新日: {new Date(subscription.current_period_end).toLocaleDateString("ja-JP")}
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-xs text-gray-500 mt-1">月額¥480で、10%OFF + ポイント2倍 + 優先予約</p>
+                    <p className="text-[10px] text-orange-600 font-medium mt-0.5">年間で最大¥12,000おトク</p>
+                  </>
+                )}
               </div>
               <div>
                 {subLoading ? null : isPassMember ? (
@@ -588,12 +589,15 @@ export default function MyPage() {
                     {cancellingPass ? "処理中..." : "解約する"}
                   </button>
                 ) : (
-                  <Link
-                    href="/pass"
-                    className="rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-xs font-bold text-white hover:shadow-md transition-all"
-                  >
-                    加入する
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-orange-500 px-2 py-0.5 text-[10px] font-bold text-white">初月無料</span>
+                    <Link
+                      href="/pass"
+                      className="rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-xs font-bold text-white hover:shadow-md transition-all"
+                    >
+                      加入する
+                    </Link>
+                  </div>
                 )}
               </div>
             </div>

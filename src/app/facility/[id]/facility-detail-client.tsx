@@ -772,7 +772,13 @@ export default function FacilityDetailClient({
                       )}
                     </div>
 
-                    <ReservationForm facility={facility} />
+                    <ReservationForm
+                      facility={facility}
+                      acceptedSizes={facilityRaw.accepted_dog_sizes}
+                      catOk={facilityRaw.cat_ok}
+                      maxPets={facilityRaw.type === "宿泊" ? 2 : facilityRaw.type === "カフェ" || facilityRaw.type === "レストラン" ? 1 : 5}
+                      userPets={userPets}
+                    />
                   </div>
                 </div>
               </div>
