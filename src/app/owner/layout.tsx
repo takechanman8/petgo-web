@@ -5,14 +5,13 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 
 const NAV_ITEMS = [
-  { href: "/admin", label: "ダッシュボード", icon: "📊" },
-  { href: "/admin/facilities", label: "施設管理", icon: "🏨" },
-  { href: "/admin/approval", label: "施設審査", icon: "✅" },
-  { href: "/admin/reservations", label: "予約管理", icon: "📋" },
-  { href: "/admin/reviews", label: "レビュー管理", icon: "⭐" },
+  { href: "/owner", label: "ダッシュボード", icon: "📊" },
+  { href: "/owner/facilities", label: "施設管理", icon: "🏨" },
+  { href: "/owner/reservations", label: "予約一覧", icon: "📋" },
+  { href: "/owner/reviews", label: "レビュー", icon: "⭐" },
 ];
 
-export default function AdminLayout({
+export default function OwnerLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -37,10 +36,10 @@ export default function AdminLayout({
         <div className="text-center max-w-sm mx-auto px-4">
           <div className="text-6xl mb-6">🔒</div>
           <h1 className="text-2xl font-bold text-gray-900 mb-3">
-            管理者ログイン
+            オーナーログイン
           </h1>
           <p className="text-gray-500 mb-8">
-            管理ダッシュボードにアクセスするにはログインしてください
+            オーナーダッシュボードにアクセスするにはログインしてください
           </p>
           <button
             onClick={signInWithGoogle}
@@ -64,7 +63,7 @@ export default function AdminLayout({
     user.user_metadata?.full_name ||
     user.user_metadata?.name ||
     user.email?.split("@")[0] ||
-    "管理者";
+    "オーナー";
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -72,8 +71,8 @@ export default function AdminLayout({
       <aside className="fixed inset-y-0 left-0 z-30 w-64 bg-gray-900 text-white flex flex-col">
         {/* Logo */}
         <div className="flex items-center gap-2 px-6 py-5 border-b border-gray-800">
-          <Link href="/" className="text-lg font-bold tracking-tight">
-            🐾 PetGo <span className="text-xs font-normal text-gray-400">Admin</span>
+          <Link href="/owner" className="text-lg font-bold tracking-tight">
+            🐾 PetGo <span className="text-xs font-normal text-gray-400">Owner</span>
           </Link>
         </div>
 
@@ -81,8 +80,8 @@ export default function AdminLayout({
         <nav className="flex-1 px-3 py-4 space-y-1">
           {NAV_ITEMS.map((item) => {
             const isActive =
-              item.href === "/admin"
-                ? pathname === "/admin"
+              item.href === "/owner"
+                ? pathname === "/owner"
                 : pathname.startsWith(item.href);
             return (
               <Link

@@ -23,11 +23,6 @@ export function FavoriteButton({
     e.preventDefault();
     e.stopPropagation();
 
-    if (!isLoggedIn) {
-      onLoginRequired?.();
-      return;
-    }
-
     setAnimating(true);
     await onToggle();
     setTimeout(() => setAnimating(false), 300);

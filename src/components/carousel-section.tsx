@@ -23,7 +23,7 @@ export function CarouselSection({
   bgClass?: string;
 }) {
   const { user, signInWithGoogle } = useAuth();
-  const { favoriteIds, toggle } = useFavorites(user);
+  const { favoriteIds, toggle, showNudge, dismissNudge } = useFavorites(user);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeft, setShowLeft] = useState(false);
   const [showRight, setShowRight] = useState(true);
@@ -151,6 +151,29 @@ export function CarouselSection({
             </>
           )}
         </div>
+
+        {/* Guest favorites nudge */}
+        {!user && showNudge && (
+          <div className="mt-4 flex items-center justify-between rounded-xl bg-gradient-to-r from-primary/10 to-amber-50 border border-primary/20 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">💚</span>
+              <p className="text-sm text-gray-700">
+                <span className="font-bold">お気に入りを保存するには会員登録（無料）</span>
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 ml-3">
+              <button
+                onClick={signInWithGoogle}
+                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white hover:bg-primary-dark transition-colors"
+              >
+                無料登録
+              </button>
+              <button onClick={dismissNudge} className="text-gray-400 hover:text-gray-600 p-1">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
