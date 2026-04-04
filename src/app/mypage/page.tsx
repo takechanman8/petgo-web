@@ -102,6 +102,9 @@ export default function MyPage() {
   // Points history expand
   const [pointsExpanded, setPointsExpanded] = useState(false);
 
+  // Reservation filter
+  const [reservationFilter, setReservationFilter] = useState<"all" | "upcoming" | "past" | "cancelled">("all");
+
   // Account settings
   const [profileForm, setProfileForm] = useState({
     nickname: "",
@@ -481,7 +484,7 @@ export default function MyPage() {
           )}
 
           {/* PetGo PASS Section */}
-          <div className="mb-8 rounded-none bg-white p-5 shadow-sm border border-gray-100">
+          <div className="mb-2 rounded-none bg-white p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-xl">👑</span>
@@ -658,12 +661,17 @@ export default function MyPage() {
           ) : activeTab === "favorites" ? (
             /* ===== お気に入り ===== */
             facilities.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="text-5xl mb-4">💚</div>
-                <p className="text-gray-500 mb-2">お気に入りの施設がまだありません</p>
-                <Link href="/" className="text-sm text-primary hover:underline">
-                  施設を探す →
-                </Link>
+              <div className="rounded-none border border-gray-200 bg-white">
+                <div className="px-5 py-3 border-b border-gray-100">
+                  <span className="text-sm font-bold text-gray-900">0件</span>
+                </div>
+                <div className="text-center py-12 px-4">
+                  <div className="text-4xl mb-3">💚</div>
+                  <p className="text-sm text-gray-500 mb-3">お気に入りの施設がまだありません</p>
+                  <Link href="/" className="inline-block rounded-lg bg-primary px-5 py-2 text-xs font-bold text-white hover:bg-primary-light transition-colors">
+                    施設を探す
+                  </Link>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -739,15 +747,20 @@ export default function MyPage() {
               ) : (
                 <>
                   {pets.length === 0 && !editingPet && (
-                    <div className="text-center py-16">
-                      <div className="text-5xl mb-4">🐾</div>
-                      <p className="text-gray-500 mb-4">ペット情報が登録されていません</p>
-                      <button
-                        onClick={() => setEditingPet(newPetForm())}
-                        className="rounded-lg bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-primary-light transition-colors"
-                      >
-                        ペットを登録する
-                      </button>
+                    <div className="rounded-none border border-gray-200 bg-white">
+                      <div className="px-5 py-3 border-b border-gray-100">
+                        <span className="text-sm font-bold text-gray-900">0件</span>
+                      </div>
+                      <div className="text-center py-12 px-4">
+                        <div className="text-4xl mb-3">🐾</div>
+                        <p className="text-sm text-gray-500 mb-3">ペット情報が登録されていません</p>
+                        <button
+                          onClick={() => setEditingPet(newPetForm())}
+                          className="rounded-lg bg-primary px-5 py-2 text-xs font-bold text-white hover:bg-primary-light transition-colors"
+                        >
+                          ペットを登録する
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -1087,12 +1100,17 @@ export default function MyPage() {
           ) : activeTab === "reviews" ? (
             /* ===== レビュー ===== */
             reviews.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="text-5xl mb-4">📝</div>
-                <p className="text-gray-500 mb-2">まだレビューを投稿していません</p>
-                <Link href="/" className="text-sm text-primary hover:underline">
-                  施設を探してレビューを書く →
-                </Link>
+              <div className="rounded-none border border-gray-200 bg-white">
+                <div className="px-5 py-3 border-b border-gray-100">
+                  <span className="text-sm font-bold text-gray-900">0件</span>
+                </div>
+                <div className="text-center py-12 px-4">
+                  <div className="text-4xl mb-3">📝</div>
+                  <p className="text-sm text-gray-500 mb-3">まだレビューを投稿していません</p>
+                  <Link href="/" className="inline-block rounded-lg bg-primary px-5 py-2 text-xs font-bold text-white hover:bg-primary-light transition-colors">
+                    レビューを書く
+                  </Link>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -1144,128 +1162,134 @@ export default function MyPage() {
             )
           ) : activeTab === "reservations" ? (
             /* ===== 予約履歴 ===== */
-            <div>
-              {/* 今後の予約 */}
-              <div className="mb-8">
-                <h3 className="text-sm font-bold text-gray-900 mb-3">今後の予約</h3>
-                {upcomingReservations.length === 0 ? (
-                  <div className="rounded-xl bg-white p-8 shadow-sm text-center">
-                    <p className="text-gray-400 text-sm">今後の予約はありません</p>
-                    <Link href="/" className="mt-2 inline-block text-sm text-primary hover:underline">
-                      施設を探して予約する →
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {upcomingReservations.map((reservation) => {
-                      const statusLabel =
-                        reservation.status === "confirmed" ? "確定" : "保留中";
-                      const statusColor =
-                        reservation.status === "confirmed"
-                          ? "bg-green-50 text-green-700"
-                          : "bg-amber-50 text-amber-700";
+            (() => {
+              const cancelledReservations = reservations.filter((r) => r.status === "cancelled");
+              const filteredReservations =
+                reservationFilter === "all" ? reservations
+                : reservationFilter === "upcoming" ? upcomingReservations
+                : reservationFilter === "past" ? reservations.filter((r) => r.check_in_date < today && r.status !== "cancelled")
+                : cancelledReservations;
 
-                      return (
-                        <div
-                          key={reservation.id}
-                          className="rounded-xl bg-white p-5 shadow-sm border-l-4 border-primary"
-                        >
-                          <Link href={`/facility/${reservation.facility_id}`} className="block">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <h4 className="font-bold text-gray-900">
-                                  {reservation.facility_name}
-                                </h4>
-                                <p className="mt-1 text-sm text-gray-700">
-                                  {reservation.check_in_date} 〜 {reservation.check_out_date}
-                                </p>
-                                <p className="mt-1 text-xs text-gray-500">
-                                  {reservation.guests}名
-                                  {reservation.pets_info && ` / ${reservation.pets_info}`}
-                                </p>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColor}`}>
-                                  {statusLabel}
-                                </span>
-                                <p className="mt-2 text-lg font-bold text-gray-900">
-                                  ¥{reservation.total_price.toLocaleString()}
-                                </p>
-                              </div>
-                            </div>
-                          </Link>
-                          <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
-                            <button
-                              onClick={async () => {
-                                if (!confirm("この予約をキャンセルしますか？")) return;
-                                const supabase = createClient();
-                                await supabase
-                                  .from("reservations")
-                                  .update({ status: "cancelled" })
-                                  .eq("id", reservation.id);
-                                window.location.reload();
-                              }}
-                              className="rounded-lg border border-red-200 px-4 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
-                            >
-                              キャンセルする
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              const filterTabs = [
+                { key: "all" as const, label: "すべて", count: reservations.length },
+                { key: "upcoming" as const, label: "予約中", count: upcomingReservations.length },
+                { key: "past" as const, label: "利用済", count: reservations.filter((r) => r.check_in_date < today && r.status !== "cancelled").length },
+                { key: "cancelled" as const, label: "キャンセル済", count: cancelledReservations.length },
+              ];
 
-              {/* 過去の予約 */}
-              <div>
-                <h3 className="text-sm font-bold text-gray-900 mb-3">過去の予約</h3>
-                {pastReservations.length === 0 ? (
-                  <div className="rounded-xl bg-gray-50 p-8 text-center">
-                    <p className="text-gray-400 text-sm">過去の予約はありません</p>
+              return (
+                <div>
+                  {/* サブタブ */}
+                  <div className="flex gap-0 border-b border-gray-200 mb-1">
+                    {filterTabs.map((ft) => (
+                      <button
+                        key={ft.key}
+                        onClick={() => setReservationFilter(ft.key)}
+                        className={`px-4 py-2.5 text-xs font-medium transition-colors border-b-2 -mb-px ${
+                          reservationFilter === ft.key
+                            ? "border-primary text-primary"
+                            : "border-transparent text-gray-400 hover:text-gray-600"
+                        }`}
+                      >
+                        {ft.label}
+                        <span className="ml-1 text-[10px]">({ft.count})</span>
+                      </button>
+                    ))}
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {pastReservations.map((reservation) => {
-                      const statusLabel =
-                        reservation.status === "confirmed"
-                          ? "利用済み"
-                          : reservation.status === "cancelled"
-                            ? "キャンセル済"
-                            : "保留中";
 
-                      return (
-                        <Link
-                          key={reservation.id}
-                          href={`/facility/${reservation.facility_id}`}
-                          className="block rounded-xl bg-gray-50 p-4 hover:bg-gray-100 transition-colors opacity-70"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <h4 className="font-medium text-gray-600 text-sm">
-                                {reservation.facility_name}
-                              </h4>
-                              <p className="mt-0.5 text-xs text-gray-400">
-                                {reservation.check_in_date} 〜 {reservation.check_out_date}
-                                {" / "}{reservation.guests}名
-                              </p>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <span className="inline-block rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-500">
-                                {statusLabel}
-                              </span>
-                              <p className="mt-1 text-sm font-medium text-gray-500">
-                                ¥{reservation.total_price.toLocaleString()}
-                              </p>
-                            </div>
-                          </div>
+                  {/* フィルター期間 */}
+                  <div className="flex items-center justify-between py-2 mb-3">
+                    <span className="text-xs text-gray-400">すべての期間</span>
+                    <span className="text-xs text-gray-500 font-medium">{filteredReservations.length}件</span>
+                  </div>
+
+                  {/* 予約一覧 */}
+                  {filteredReservations.length === 0 ? (
+                    <div className="rounded-none border border-gray-200 bg-white">
+                      <div className="text-center py-12 px-4">
+                        <div className="text-4xl mb-3">📋</div>
+                        <p className="text-sm text-gray-500 mb-3">該当する予約が見つかりませんでした。</p>
+                        <Link href="/" className="inline-block rounded-lg bg-primary px-5 py-2 text-xs font-bold text-white hover:bg-primary-light transition-colors">
+                          施設を探して予約する
                         </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredReservations.map((reservation) => {
+                        const isUpcoming = reservation.check_in_date >= today && reservation.status !== "cancelled";
+                        const statusLabel =
+                          reservation.status === "cancelled"
+                            ? "キャンセル済"
+                            : reservation.check_in_date < today
+                              ? "利用済み"
+                              : reservation.status === "confirmed"
+                                ? "確定"
+                                : "保留中";
+                        const statusColor =
+                          reservation.status === "cancelled"
+                            ? "bg-gray-100 text-gray-500"
+                            : reservation.check_in_date < today
+                              ? "bg-gray-100 text-gray-500"
+                              : reservation.status === "confirmed"
+                                ? "bg-green-50 text-green-700"
+                                : "bg-amber-50 text-amber-700";
+
+                        return (
+                          <div
+                            key={reservation.id}
+                            className={`rounded-none border bg-white ${isUpcoming ? "border-l-4 border-l-primary border-gray-200" : "border-gray-200"} ${!isUpcoming ? "opacity-70" : ""}`}
+                          >
+                            <Link href={`/facility/${reservation.facility_id}`} className="block p-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <h4 className={`font-bold ${isUpcoming ? "text-gray-900" : "text-gray-600"} text-sm`}>
+                                    {reservation.facility_name}
+                                  </h4>
+                                  <p className="mt-1 text-sm text-gray-600">
+                                    {reservation.check_in_date} 〜 {reservation.check_out_date}
+                                  </p>
+                                  <p className="mt-0.5 text-xs text-gray-400">
+                                    {reservation.guests}名
+                                    {reservation.pets_info && ` / ${reservation.pets_info}`}
+                                  </p>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColor}`}>
+                                    {statusLabel}
+                                  </span>
+                                  <p className={`mt-1 text-lg font-bold ${isUpcoming ? "text-gray-900" : "text-gray-500"}`}>
+                                    ¥{reservation.total_price.toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                            </Link>
+                            {isUpcoming && (
+                              <div className="px-4 pb-3 flex justify-end">
+                                <button
+                                  onClick={async () => {
+                                    if (!confirm("この予約をキャンセルしますか？")) return;
+                                    const supabase = createClient();
+                                    await supabase
+                                      .from("reservations")
+                                      .update({ status: "cancelled" })
+                                      .eq("id", reservation.id);
+                                    window.location.reload();
+                                  }}
+                                  className="rounded-lg border border-red-200 px-4 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
+                                >
+                                  キャンセルする
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()
           ) : (
             /* ===== アカウント設定 ===== */
             <div className="space-y-6">
