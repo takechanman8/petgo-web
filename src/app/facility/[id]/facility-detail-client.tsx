@@ -274,6 +274,9 @@ export default function FacilityDetailClient({
   const [planSizeFilter, setPlanSizeFilter] = useState("all");
   const [selectedPlan, setSelectedPlan] = useState<{ name: string; price: number } | null>(null);
 
+  // Mobile booking bottom sheet
+  const [mobileBookingOpen, setMobileBookingOpen] = useState(false);
+
   // Section 7: Category photo gallery
   const [photoCat, setPhotoCat] = useState<string>("すべて");
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
@@ -780,8 +783,8 @@ export default function FacilityDetailClient({
                   </div>
                 </div>
 
-                {/* ===== セクション2: 予約ボックス（スティッキー） ===== */}
-                <div className="w-full lg:w-80 shrink-0">
+                {/* ===== セクション2: 予約ボックス（スティッキー、PC only） ===== */}
+                <div className="hidden lg:block w-80 shrink-0">
                   <div className="lg:sticky lg:top-20 space-y-4">
                     {/* 閲覧中・残り表示 */}
                     <div className="bg-white rounded-xl shadow-sm p-4 space-y-2">
@@ -1063,6 +1066,99 @@ export default function FacilityDetailClient({
         </div>
       </main>
       <Footer />
+
+      {/* ===== Mobile fixed booking bar ===== */}
+      {facility && facilityRaw && (
+        <>
+          {/* Bottom padding spacer for mobile */}
+          <div className="lg:hidden h-16" />
+
+          {/* Fixed bar */}
+          <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.08)]">
+            <div className="flex items-center justify-between px-4 py-3">
+              <div>
+                <span className="text-lg font-black text-primary">
+                  ¥{(selectedPlan ? selectedPlan.price : facility.price).toLocaleString()}
+                </span>
+                <span className="text-xs text-gray-400 ml-0.5">〜</span>
+                {selectedPlan && (
+                  <p className="text-[10px] text-orange-500 font-medium">{selectedPlan.name}</p>
+                )}
+              </div>
+              <button
+                onClick={() => setMobileBookingOpen(true)}
+                className="rounded-lg bg-accent px-6 py-2.5 text-sm font-bold text-white hover:bg-accent-dark transition-colors"
+              >
+                予約する
+              </button>
+            </div>
+          </div>
+
+          {/* Bottom sheet overlay */}
+          {mobileBookingOpen && (
+            <div className="fixed inset-0 z-50 lg:hidden">
+              <div className="absolute inset-0 bg-black/40" onClick={() => setMobileBookingOpen(false)} />
+              <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] bg-white rounded-t-2xl shadow-2xl animate-slide-up overflow-y-auto">
+                {/* Handle bar + close */}
+                <div className="sticky top-0 bg-white rounded-t-2xl z-10 px-4 pt-3 pb-2 border-b border-gray-100">
+                  <div className="w-10 h-1 rounded-full bg-gray-300 mx-auto mb-2" />
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-bold text-gray-900">予約</h3>
+                    <button
+                      onClick={() => setMobileBookingOpen(false)}
+                      className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Booking form content */}
+                <div className="p-4 space-y-4">
+                  {/* Viewer count */}
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                    </span>
+                    本日<span className="font-bold text-gray-900">{viewerCount}人</span>がこの施設を閲覧中
+                  </div>
+
+                  {selectedPlan && (
+                    <div className="bg-orange-50 rounded-lg border border-orange-200 p-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] text-orange-500 font-medium">選択中のプラン</p>
+                        <p className="text-sm font-bold text-gray-900">{selectedPlan.name}</p>
+                      </div>
+                      <p className="text-lg font-bold text-gray-900">¥{selectedPlan.price.toLocaleString()}</p>
+                    </div>
+                  )}
+
+                  <ReservationForm
+                    facility={selectedPlan ? { ...facility, price: selectedPlan.price } : facility}
+                    acceptedSizes={facilityRaw.accepted_dog_sizes}
+                    catOk={facilityRaw.cat_ok}
+                    maxPets={facilityRaw.type === "宿泊" ? 2 : facilityRaw.type === "カフェ" || facilityRaw.type === "レストラン" ? 1 : 5}
+                    userPets={userPets}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <style jsx global>{`
+            @keyframes slideUp {
+              from { transform: translateY(100%); }
+              to { transform: translateY(0); }
+            }
+            .animate-slide-up {
+              animation: slideUp 0.3s ease-out;
+            }
+          `}</style>
+        </>
+      )}
 
       {/* Lightbox modal for Section 7 */}
       {lightboxImg && (
