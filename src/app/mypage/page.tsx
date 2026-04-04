@@ -87,13 +87,34 @@ export default function MyPage() {
   const [reviews, setReviews] = useState<UserReview[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [activeTab, setActiveTab] = useState<"favorites" | "reviews" | "reservations" | "pets">("favorites");
+  const [activeTab, setActiveTab] = useState<"favorites" | "reviews" | "reservations" | "pets" | "account">("favorites");
 
   // Pet state
   const [pets, setPets] = useState<Pet[]>([]);
   const [loadingPets, setLoadingPets] = useState(true);
   const [editingPet, setEditingPet] = useState<PetFormData | null>(null);
   const [savingPet, setSavingPet] = useState(false);
+
+  // Profile photo
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  // Points history expand
+  const [pointsExpanded, setPointsExpanded] = useState(false);
+
+  // Account settings
+  const [profileForm, setProfileForm] = useState({
+    nickname: "",
+    birth_year: null as number | null,
+    birth_month: null as number | null,
+    birth_day: null as number | null,
+    gender: "" as "" | "male" | "female" | "other",
+    address: "",
+    phone: "",
+  });
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [newsletterEnabled, setNewsletterEnabled] = useState(true);
+  const [savingNewsletter, setSavingNewsletter] = useState(false);
 
   const fetchPets = useCallback(async () => {
     if (!user) return;
@@ -186,6 +207,29 @@ export default function MyPage() {
 
     fetchData();
     fetchPets();
+
+    // Load user settings
+    async function loadSettings() {
+      const { data } = await supabase
+        .from("user_settings")
+        .select("*")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      if (data) {
+        setProfileForm({
+          nickname: data.nickname ?? "",
+          birth_year: data.birth_year ?? null,
+          birth_month: data.birth_month ?? null,
+          birth_day: data.birth_day ?? null,
+          gender: data.gender ?? "",
+          address: data.address ?? "",
+          phone: data.phone ?? "",
+        });
+        setNewsletterEnabled(data.newsletter_enabled ?? true);
+        if (data.avatar_url) setAvatarUrl(data.avatar_url);
+      }
+    }
+    loadSettings();
   }, [user, fetchPets]);
 
   const handleSavePet = async () => {
@@ -265,6 +309,57 @@ export default function MyPage() {
     fetchPets();
   };
 
+  const handleAvatarUpload = async (file: File) => {
+    if (!user) return;
+    setUploadingAvatar(true);
+    const supabase = createClient();
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/avatar_${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("avatars").upload(path, file);
+    if (!error) {
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const newUrl = urlData.publicUrl;
+      setAvatarUrl(newUrl);
+      await supabase
+        .from("user_settings")
+        .upsert({ user_id: user.id, avatar_url: newUrl }, { onConflict: "user_id" });
+    }
+    setUploadingAvatar(false);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setSavingProfile(true);
+    const supabase = createClient();
+    await supabase.from("user_settings").upsert(
+      {
+        user_id: user.id,
+        nickname: profileForm.nickname.trim() || null,
+        birth_year: profileForm.birth_year,
+        birth_month: profileForm.birth_month,
+        birth_day: profileForm.birth_day,
+        gender: profileForm.gender || null,
+        address: profileForm.address.trim() || null,
+        phone: profileForm.phone.trim() || null,
+      },
+      { onConflict: "user_id" },
+    );
+    setSavingProfile(false);
+    alert("保存しました");
+  };
+
+  const handleToggleNewsletter = async (enabled: boolean) => {
+    if (!user) return;
+    setNewsletterEnabled(enabled);
+    setSavingNewsletter(true);
+    const supabase = createClient();
+    await supabase.from("user_settings").upsert(
+      { user_id: user.id, newsletter_enabled: enabled },
+      { onConflict: "user_id" },
+    );
+    setSavingNewsletter(false);
+  };
+
   const emptyDocFiles = (): Record<DocKey, File | null> => ({
     doc_registration: null,
     doc_passport: null,
@@ -340,19 +435,53 @@ export default function MyPage() {
         <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
           {/* Profile Section */}
           {authLoading ? (
-            <div className="animate-pulse space-y-2 mb-8">
-              <div className="h-5 w-32 rounded bg-gray-200" />
-              <div className="h-4 w-48 rounded bg-gray-200" />
+            <div className="animate-pulse flex items-center gap-4 mb-8">
+              <div className="h-14 w-14 rounded-full bg-gray-200" />
+              <div className="space-y-2">
+                <div className="h-5 w-32 rounded bg-gray-200" />
+                <div className="h-4 w-48 rounded bg-gray-200" />
+              </div>
             </div>
           ) : (
-            <div className="mb-8">
-              <h1 className="text-xl font-bold text-gray-900">{displayName}</h1>
-              <p className="text-sm text-gray-500 mt-0.5">{user?.email}</p>
+            <div className="flex items-center gap-4 mb-8">
+              <label className="relative cursor-pointer group shrink-0">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleAvatarUpload(f);
+                  }}
+                />
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="" className="h-14 w-14 rounded-full object-cover border-2 border-gray-200 group-hover:border-primary transition-colors" />
+                ) : (
+                  <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-lg font-bold text-primary group-hover:bg-primary/20 transition-colors">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="absolute inset-0 rounded-full flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+                  <svg className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                {uploadingAvatar && (
+                  <div className="absolute inset-0 rounded-full bg-white/70 flex items-center justify-center">
+                    <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </label>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">{displayName}</h1>
+                <p className="text-sm text-gray-500 mt-0.5">{user?.email}</p>
+              </div>
             </div>
           )}
 
           {/* PetGo PASS Section */}
-          <div className="mb-8 rounded-xl bg-white p-5 shadow-sm border border-gray-100">
+          <div className="mb-8 rounded-none bg-white p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-xl">👑</span>
@@ -403,24 +532,23 @@ export default function MyPage() {
           </div>
 
           {/* Points Section */}
-          <div className="mb-8 rounded-xl bg-white p-5 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-xl">🪙</span>
-              <h2 className="font-bold text-gray-900">ポイント</h2>
+          <div className="mb-8 rounded-none bg-white p-4 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-50 text-base">🪙</span>
+              <h2 className="font-bold text-gray-900 text-sm">ポイント</h2>
             </div>
 
             {pointsLoading ? (
-              <div className="animate-pulse space-y-3">
-                <div className="h-10 w-32 rounded bg-gray-200" />
-                <div className="h-4 w-48 rounded bg-gray-200" />
+              <div className="animate-pulse space-y-2">
+                <div className="h-8 w-24 rounded bg-gray-200" />
               </div>
             ) : (
               <>
-                <div className="flex items-end justify-between mb-4">
-                  <div>
-                    <p className="text-4xl font-bold text-primary">{totalPoints.toLocaleString()}<span className="text-lg font-normal text-gray-500 ml-1">pt</span></p>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-2xl font-bold text-primary">{totalPoints.toLocaleString()}<span className="text-sm font-normal text-gray-500 ml-0.5">pt</span></p>
                     {isPassMember && (
-                      <p className="text-xs text-amber-600 mt-1">PASS会員: ポイント2倍ボーナス適用中</p>
+                      <span className="text-[10px] text-amber-600">2倍ボーナス中</span>
                     )}
                   </div>
                   <button
@@ -449,20 +577,20 @@ export default function MyPage() {
                 </div>
 
                 {pointHistory.length > 0 && (
-                  <div className="border-t border-gray-100 pt-4">
-                    <h3 className="text-sm font-medium text-gray-700 mb-3">ポイント履歴</h3>
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {pointHistory.map((entry) => (
-                        <div key={entry.id} className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2">
-                            <span className={`inline-block h-2 w-2 rounded-full ${entry.type === "earned" ? "bg-green-400" : "bg-red-400"}`} />
-                            <span className="text-gray-700">
+                  <div className="border-t border-gray-100 pt-3">
+                    <h3 className="text-xs font-medium text-gray-500 mb-2">履歴</h3>
+                    <div className="space-y-1.5">
+                      {(pointsExpanded ? pointHistory : pointHistory.slice(0, 5)).map((entry) => (
+                        <div key={entry.id} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`inline-block h-1.5 w-1.5 rounded-full ${entry.type === "earned" ? "bg-green-400" : "bg-red-400"}`} />
+                            <span className="text-gray-600">
                               {entry.reason === "reservation" && "予約完了"}
                               {entry.reason === "review" && "レビュー投稿"}
                               {entry.reason === "referral" && "紹介ボーナス"}
                               {entry.reason === "coupon_used" && "クーポン交換"}
                             </span>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-gray-400">
                               {new Date(entry.created_at).toLocaleDateString("ja-JP")}
                             </span>
                           </div>
@@ -472,6 +600,14 @@ export default function MyPage() {
                         </div>
                       ))}
                     </div>
+                    {pointHistory.length > 5 && (
+                      <button
+                        onClick={() => setPointsExpanded(!pointsExpanded)}
+                        className="mt-2 text-xs text-primary hover:underline"
+                      >
+                        {pointsExpanded ? "閉じる" : `もっと見る（全${pointHistory.length}件）`}
+                      </button>
+                    )}
                   </div>
                 )}
               </>
@@ -485,6 +621,7 @@ export default function MyPage() {
               { key: "pets" as const, label: "ペット情報", count: pets.length },
               { key: "reservations" as const, label: "予約履歴", count: reservations.length },
               { key: "reviews" as const, label: "レビュー", count: reviews.length },
+              { key: "account" as const, label: "アカウント設定", count: 0 },
             ]).map((tab) => (
               <button
                 key={tab.key}
@@ -1005,7 +1142,7 @@ export default function MyPage() {
                 ))}
               </div>
             )
-          ) : (
+          ) : activeTab === "reservations" ? (
             /* ===== 予約履歴 ===== */
             <div>
               {/* 今後の予約 */}
@@ -1127,6 +1264,115 @@ export default function MyPage() {
                     })}
                   </div>
                 )}
+              </div>
+            </div>
+          ) : (
+            /* ===== アカウント設定 ===== */
+            <div className="space-y-6">
+              {/* 会員情報 */}
+              <div className="rounded-xl bg-white p-5 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-4">会員情報の確認・変更</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">ニックネーム</label>
+                    <input
+                      type="text"
+                      value={profileForm.nickname}
+                      onChange={(e) => setProfileForm({ ...profileForm, nickname: e.target.value })}
+                      placeholder="表示名"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">生年月日</label>
+                    <div className="flex gap-2">
+                      <select value={profileForm.birth_year ?? ""} onChange={(e) => setProfileForm({ ...profileForm, birth_year: e.target.value ? Number(e.target.value) : null })} className="flex-1 rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-primary focus:outline-none">
+                        <option value="">年</option>
+                        {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+                      </select>
+                      <select value={profileForm.birth_month ?? ""} onChange={(e) => setProfileForm({ ...profileForm, birth_month: e.target.value ? Number(e.target.value) : null })} className="w-20 rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-primary focus:outline-none">
+                        <option value="">月</option>
+                        {MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                      <select value={profileForm.birth_day ?? ""} onChange={(e) => setProfileForm({ ...profileForm, birth_day: e.target.value ? Number(e.target.value) : null })} className="w-20 rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-primary focus:outline-none">
+                        <option value="">日</option>
+                        {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{d}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">性別</label>
+                    <select value={profileForm.gender} onChange={(e) => setProfileForm({ ...profileForm, gender: e.target.value as typeof profileForm.gender })} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                      <option value="">選択してください</option>
+                      <option value="male">男性</option>
+                      <option value="female">女性</option>
+                      <option value="other">その他</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">住所</label>
+                    <input type="text" value={profileForm.address} onChange={(e) => setProfileForm({ ...profileForm, address: e.target.value })} placeholder="例: 東京都渋谷区..." className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">電話番号</label>
+                    <input type="tel" value={profileForm.phone} onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })} placeholder="例: 090-1234-5678" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+                  </div>
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={savingProfile}
+                    className="rounded-lg bg-primary px-6 py-2 text-sm font-bold text-white hover:bg-primary-light transition-colors disabled:opacity-50"
+                  >
+                    {savingProfile ? "保存中..." : "保存する"}
+                  </button>
+                </div>
+              </div>
+
+              {/* メールアドレス */}
+              <div className="rounded-xl bg-white p-5 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-2">メールアドレス</h3>
+                <p className="text-sm text-gray-500 mb-3">{user?.email}</p>
+                <p className="text-xs text-gray-400">メールアドレスの変更はGoogleアカウントの設定から行ってください。</p>
+              </div>
+
+              {/* パスワード */}
+              <div className="rounded-xl bg-white p-5 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-2">パスワードの変更</h3>
+                <p className="text-xs text-gray-400">Google認証でログインしているため、パスワードはGoogleアカウントで管理されています。</p>
+              </div>
+
+              {/* メールマガジン設定 */}
+              <div className="rounded-xl bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-gray-900">メールマガジン設定</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">おすすめ施設やキャンペーン情報をお届けします</p>
+                  </div>
+                  <button
+                    onClick={() => handleToggleNewsletter(!newsletterEnabled)}
+                    disabled={savingNewsletter}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${newsletterEnabled ? "bg-primary" : "bg-gray-300"}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${newsletterEnabled ? "translate-x-6" : "translate-x-0"}`} />
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  {newsletterEnabled ? "受信する" : "受信しない"}
+                </p>
+              </div>
+
+              {/* 退会 */}
+              <div className="rounded-xl bg-white p-5 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-2">退会手続き</h3>
+                <p className="text-xs text-gray-400 mb-3">退会するとすべてのデータが削除されます。この操作は取り消せません。</p>
+                <button
+                  onClick={() => {
+                    if (!confirm("本当に退会しますか？すべてのデータが削除されます。")) return;
+                    alert("退会処理はサポートまでお問い合わせください。");
+                  }}
+                  className="rounded-lg border border-red-200 px-4 py-2 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
+                >
+                  退会する
+                </button>
               </div>
             </div>
           )}
