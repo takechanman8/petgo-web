@@ -29,6 +29,7 @@ interface Reservation {
   id: string;
   facility_id: string;
   facility_name: string;
+  facility_type: string;
   check_in_date: string;
   check_out_date: string;
   guests: number;
@@ -104,6 +105,7 @@ export default function MyPage() {
 
   // Reservation filter
   const [reservationFilter, setReservationFilter] = useState<"all" | "upcoming" | "past" | "cancelled">("all");
+  const [reservationTypeFilter, setReservationTypeFilter] = useState<string>("all");
 
   // Account settings
   const [profileForm, setProfileForm] = useState({
@@ -158,7 +160,7 @@ export default function MyPage() {
           .order("created_at", { ascending: false }),
         supabase
           .from("reservations")
-          .select("id, facility_id, check_in_date, check_out_date, guests, pets_info, total_price, status, created_at, facilities(name)")
+          .select("id, facility_id, check_in_date, check_out_date, guests, pets_info, total_price, status, created_at, facilities(name, type)")
           .eq("user_id", user!.id)
           .order("created_at", { ascending: false }),
       ]);
@@ -193,7 +195,8 @@ export default function MyPage() {
         const mapped = reservationResult.data.map((r) => ({
           id: r.id,
           facility_id: r.facility_id,
-          facility_name: (r.facilities as unknown as { name: string })?.name ?? "不明な施設",
+          facility_name: (r.facilities as unknown as { name: string; type: string })?.name ?? "不明な施設",
+          facility_type: (r.facilities as unknown as { name: string; type: string })?.type ?? "",
           check_in_date: r.check_in_date,
           check_out_date: r.check_out_date,
           guests: r.guests,
@@ -618,7 +621,7 @@ export default function MyPage() {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 border-b border-gray-200 mb-6 overflow-x-auto">
+          <div className="flex gap-1 border-b border-gray-200 mb-6 flex-wrap scrollbar-hide" style={{ overflow: 'visible' }}>
             {([
               { key: "favorites" as const, label: "お気に入り", count: facilities.length },
               { key: "pets" as const, label: "ペット情報", count: pets.length },
@@ -1164,11 +1167,15 @@ export default function MyPage() {
             /* ===== 予約履歴 ===== */
             (() => {
               const cancelledReservations = reservations.filter((r) => r.status === "cancelled");
-              const filteredReservations =
+              const statusFiltered =
                 reservationFilter === "all" ? reservations
                 : reservationFilter === "upcoming" ? upcomingReservations
                 : reservationFilter === "past" ? reservations.filter((r) => r.check_in_date < today && r.status !== "cancelled")
                 : cancelledReservations;
+
+              const filteredReservations = reservationTypeFilter === "all"
+                ? statusFiltered
+                : statusFiltered.filter((r) => r.facility_type === reservationTypeFilter);
 
               const filterTabs = [
                 { key: "all" as const, label: "すべて", count: reservations.length },
@@ -1197,9 +1204,24 @@ export default function MyPage() {
                     ))}
                   </div>
 
-                  {/* フィルター期間 */}
+                  {/* フィルター */}
                   <div className="flex items-center justify-between py-2 mb-3">
-                    <span className="text-xs text-gray-400">すべての期間</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-gray-400">すべての期間</span>
+                      <select
+                        value={reservationTypeFilter}
+                        onChange={(e) => setReservationTypeFilter(e.target.value)}
+                        className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 focus:border-primary focus:outline-none"
+                      >
+                        <option value="all">施設タイプ: すべて</option>
+                        <option value="宿泊">宿泊</option>
+                        <option value="カフェ">カフェ</option>
+                        <option value="ドッグラン">ドッグラン</option>
+                        <option value="レストラン">レストラン</option>
+                        <option value="ペットサロン">ペットサロン</option>
+                        <option value="動物病院">動物病院</option>
+                      </select>
+                    </div>
                     <span className="text-xs text-gray-500 font-medium">{filteredReservations.length}件</span>
                   </div>
 
