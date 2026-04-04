@@ -102,6 +102,30 @@ const fallbackFacilities: Facility[] = [
     type: "宿泊",
     image: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&h=300&fit=crop",
   },
+  {
+    id: "a9999999-9999-9999-9999-999999999999",
+    name: "富士山ビュー ペットヴィラ",
+    area: "山梨県・河口湖",
+    rating: 4.7,
+    reviews: 198,
+    petScore: 94,
+    sizes: ["小型犬", "中型犬", "大型犬"],
+    price: 23000,
+    type: "宿泊",
+    image: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=400&h=300&fit=crop",
+  },
+  {
+    id: "a0000000-0000-0000-0000-000000000000",
+    name: "ペットと海カフェ WAVE",
+    area: "神奈川県・逗子",
+    rating: 4.5,
+    reviews: 134,
+    petScore: 87,
+    sizes: ["小型犬", "中型犬"],
+    price: 1800,
+    type: "カフェ",
+    image: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&h=300&fit=crop",
+  },
 ];
 
 export function useFacilities() {
