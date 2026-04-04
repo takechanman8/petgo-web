@@ -8,7 +8,7 @@ export interface PointHistory {
   id: string;
   points: number;
   type: "earned" | "used";
-  reason: "reservation" | "review" | "referral" | "coupon_used";
+  reason: "reservation" | "review" | "referral" | "coupon_used" | "birthday_bonus";
   reference_id: string | null;
   created_at: string;
 }

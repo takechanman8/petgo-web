@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { usePoints, usePointsForCoupon } from "@/hooks/usePoints";
 import { useFavorites } from "@/hooks/useFavorites";
+import { petChan } from "@/lib/petName";
 import type { Facility } from "@/types/facility";
 
 interface UserReview {
@@ -102,6 +103,9 @@ export default function MyPage() {
 
   // Points history expand
   const [pointsExpanded, setPointsExpanded] = useState(false);
+
+  // Birthday bonus
+  const [birthdayPets, setBirthdayPets] = useState<string[]>([]);
 
   // Reservation filter
   const [reservationFilter, setReservationFilter] = useState<"all" | "upcoming" | "past" | "cancelled">("all");
@@ -236,7 +240,66 @@ export default function MyPage() {
       }
     }
     loadSettings();
-  }, [user, fetchPets]);
+
+    // Birthday bonus check
+    async function checkBirthdayBonus() {
+      if (!user) return;
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
+
+      const { data: petsData } = await supabase
+        .from("pets")
+        .select("id, name, birth_month")
+        .eq("user_id", user.id);
+
+      if (!petsData) return;
+
+      const bdayPets = petsData.filter((p) => p.birth_month === currentMonth);
+      if (bdayPets.length === 0) return;
+
+      setBirthdayPets(bdayPets.map((p) => p.name));
+
+      // Check if already granted this year for each pet
+      for (const pet of bdayPets) {
+        const refId = `birthday_${pet.id}_${currentYear}`;
+        const { data: existing } = await supabase
+          .from("point_history")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("reason", "birthday_bonus")
+          .eq("reference_id", refId)
+          .maybeSingle();
+
+        if (!existing) {
+          // Grant 200 points
+          await supabase.from("point_history").insert({
+            user_id: user.id,
+            points: 200,
+            type: "earned",
+            reason: "birthday_bonus",
+            reference_id: refId,
+          });
+          // Update total
+          const { data: pts } = await supabase
+            .from("user_points")
+            .select("total_points")
+            .eq("user_id", user.id)
+            .maybeSingle();
+          if (pts) {
+            await supabase
+              .from("user_points")
+              .update({ total_points: pts.total_points + 200 })
+              .eq("user_id", user.id);
+          } else {
+            await supabase.from("user_points").insert({ user_id: user.id, total_points: 200 });
+          }
+          refetchPoints();
+        }
+      }
+    }
+    checkBirthdayBonus();
+  }, [user, fetchPets, refetchPoints]);
 
   const handleSavePet = async () => {
     if (!user || !editingPet || !editingPet.name.trim()) return;
@@ -580,6 +643,14 @@ export default function MyPage() {
                   </button>
                 </div>
 
+                {birthdayPets.length > 0 && (
+                  <div className="rounded-lg bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 px-4 py-2.5 mb-2">
+                    <p className="text-xs font-bold text-orange-700">
+                      🎂 今月は{birthdayPets.map((n) => petChan(n)).join("・")}のお誕生日月！+200ptプレゼント
+                    </p>
+                  </div>
+                )}
+
                 {pointHistory.length > 0 && (
                   <div className="border-t border-gray-100 pt-3">
                     <h3 className="text-xs font-medium text-gray-500 mb-2">履歴</h3>
@@ -593,6 +664,7 @@ export default function MyPage() {
                               {entry.reason === "review" && "レビュー投稿"}
                               {entry.reason === "referral" && "紹介ボーナス"}
                               {entry.reason === "coupon_used" && "クーポン交換"}
+                              {entry.reason === "birthday_bonus" && "🎂 お誕生日ボーナス"}
                             </span>
                             <span className="text-gray-400">
                               {new Date(entry.created_at).toLocaleDateString("ja-JP")}
@@ -780,7 +852,7 @@ export default function MyPage() {
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-gray-900">{pet.name}</h3>
+                              <h3 className="font-bold text-gray-900">{petChan(pet.name)}</h3>
                               <p className="text-sm text-gray-500">
                                 {pet.type}
                                 {pet.breed && ` / ${pet.breed}`}
