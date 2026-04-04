@@ -9,7 +9,7 @@ import { Footer } from "@/components/footer";
 import { FavoriteButton } from "@/components/favorite-button";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
-import { usePoints, usePointsForCoupon } from "@/hooks/usePoints";
+import { usePoints, usePointsForCoupon, refundPoints } from "@/hooks/usePoints";
 import { useFavorites } from "@/hooks/useFavorites";
 import { petChan } from "@/lib/petName";
 import type { Facility } from "@/types/facility";
@@ -237,6 +237,15 @@ export default function MyPage() {
         });
         setNewsletterEnabled(data.newsletter_enabled ?? true);
         if (data.avatar_url) setAvatarUrl(data.avatar_url);
+        // Ensure referral_code exists
+        if (!data.referral_code) {
+          const code = user!.id.slice(0, 8);
+          await supabase.from("user_settings").update({ referral_code: code }).eq("user_id", user!.id);
+        }
+      } else {
+        // Create settings with referral_code
+        const code = user!.id.slice(0, 8);
+        await supabase.from("user_settings").insert({ user_id: user!.id, referral_code: code });
       }
     }
     loadSettings();
@@ -664,11 +673,17 @@ export default function MyPage() {
                           <div className="flex items-center gap-1.5">
                             <span className={`inline-block h-1.5 w-1.5 rounded-full ${entry.type === "earned" ? "bg-green-400" : "bg-red-400"}`} />
                             <span className="text-gray-600">
+                              {entry.reason === "registration_bonus" && "🎉 会員登録ボーナス"}
+                              {entry.reason === "referral_bonus" && "👥 友達紹介ボーナス"}
+                              {entry.reason === "referral_welcome" && "🎁 紹介特典"}
+                              {entry.reason === "booking_bonus" && "予約完了"}
+                              {entry.reason === "review_bonus" && "レビュー投稿"}
+                              {entry.reason === "birthday_bonus" && "🎂 お誕生日ボーナス"}
+                              {entry.reason === "cancel_refund" && "↩️ キャンセル返還"}
+                              {entry.reason === "coupon_used" && "クーポン交換"}
                               {entry.reason === "reservation" && "予約完了"}
                               {entry.reason === "review" && "レビュー投稿"}
                               {entry.reason === "referral" && "紹介ボーナス"}
-                              {entry.reason === "coupon_used" && "クーポン交換"}
-                              {entry.reason === "birthday_bonus" && "🎂 お誕生日ボーナス"}
                             </span>
                             <span className="text-gray-400">
                               {new Date(entry.created_at).toLocaleDateString("ja-JP")}
@@ -1368,6 +1383,16 @@ export default function MyPage() {
                                   onClick={async () => {
                                     if (!confirm("この予約をキャンセルしますか？")) return;
                                     const supabase = createClient();
+                                    // ポイント利用分を返還
+                                    const { data: resData } = await supabase
+                                      .from("reservations")
+                                      .select("points_used")
+                                      .eq("id", reservation.id)
+                                      .maybeSingle();
+                                    const pointsUsed = resData?.points_used ?? 0;
+                                    if (pointsUsed > 0 && user) {
+                                      await refundPoints(user.id, pointsUsed, reservation.id);
+                                    }
                                     await supabase
                                       .from("reservations")
                                       .update({ status: "cancelled" })
@@ -1460,6 +1485,38 @@ export default function MyPage() {
               <div className="rounded-xl bg-white p-5 shadow-sm">
                 <h3 className="font-bold text-gray-900 mb-2">パスワードの変更</h3>
                 <p className="text-xs text-gray-400">Google認証でログインしているため、パスワードはGoogleアカウントで管理されています。</p>
+              </div>
+
+              {/* 友達を��介する */}
+              <div className="rounded-xl bg-white p-5 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-2">友達を紹介する</h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  友達が登録すると、あなたに<span className="font-bold text-primary">200pt</span>、
+                  お友達に<span className="font-bold text-primary">100pt</span>プレゼント！
+                </p>
+                {(() => {
+                  const code = user?.id?.slice(0, 8) ?? "";
+                  const link = `https://petgo-web.vercel.app/?ref=${code}`;
+                  return (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={link}
+                        className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-600 bg-gray-50"
+                      />
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(link);
+                          alert("紹介リンクをコピーしました！");
+                        }}
+                        className="shrink-0 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white hover:bg-primary-light transition-colors"
+                      >
+                        コピー
+                      </button>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* メールマガジン設定 */}

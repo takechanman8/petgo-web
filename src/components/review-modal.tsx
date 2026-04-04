@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase";
-import { addPoints } from "@/hooks/usePoints";
+import { addReviewPoints } from "@/hooks/usePoints";
 import type { User } from "@supabase/supabase-js";
 
 interface ReviewModalProps {
@@ -93,7 +93,7 @@ export function ReviewModal({
       if (insertError) throw insertError;
 
       // ポイント付与
-      const { points } = await addPoints(user.id, "review", isPassMember, facilityId);
+      const { points } = await addReviewPoints(user.id, isPassMember, facilityId);
       setEarnedPoints(points);
 
       onSubmitted();

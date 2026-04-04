@@ -6,7 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
-import { addPoints } from "@/hooks/usePoints";
+import { addBookingPoints } from "@/hooks/usePoints";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 
@@ -93,7 +93,7 @@ function ReservationSuccessContent() {
         setErrorMsg("予約の保存に失敗しました。お問い合わせください。");
       } else {
         // ポイント付与
-        const { points } = await addPoints(user!.id, "reservation", isPassMember, facilityId!);
+        const { points } = await addBookingPoints(user!.id, Number(totalPrice), isPassMember, facilityId!);
         setEarnedPoints(points);
         setStatus("success");
       }

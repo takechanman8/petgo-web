@@ -139,6 +139,7 @@ export function ReservationForm({
           petsInfo: petsInfoText,
           totalPrice,
           nights,
+          pointsUsed: pointDiscount,
         }),
       });
 
