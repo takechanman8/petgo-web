@@ -836,7 +836,7 @@ export default function MyPage() {
                   </svg>
                   <p className="text-sm text-gray-500 mb-3">お気に入りの施設がまだありません</p>
                   <Link href="/" className="inline-block rounded-lg bg-primary px-5 py-2 text-xs font-bold text-white hover:bg-primary-light transition-colors">
-                    施設を探す
+                    おでかけ先を探す
                   </Link>
                 </div>
               </div>

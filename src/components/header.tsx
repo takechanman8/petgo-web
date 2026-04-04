@@ -50,7 +50,7 @@ export function Header() {
 
           <nav className="hidden md:flex items-center gap-8">
             {[
-              { href: "/search", label: "施設を探す" },
+              { href: "/search", label: "おでかけ先を探す" },
               { href: "/features", label: "特集" },
               { href: "/magazine", label: "PetGoマガジン" },
             ].map((link) => (
@@ -226,7 +226,7 @@ export function Header() {
                   <div className="my-1 mx-5 border-t border-gray-100" />
                 </>
               )}
-              <DrawerLink href="/search" icon="search" label="施設を探す" onClick={() => setDrawerOpen(false)} />
+              <DrawerLink href="/search" icon="search" label="おでかけ先を探す" onClick={() => setDrawerOpen(false)} />
               <DrawerLink href="/features" icon="star" label="特集" onClick={() => setDrawerOpen(false)} />
               <DrawerLink href="/magazine" icon="book" label="PetGoマガジン" onClick={() => setDrawerOpen(false)} />
               <DrawerLink href="/pass" icon="pass" label="PetGo PASS" onClick={() => setDrawerOpen(false)} />

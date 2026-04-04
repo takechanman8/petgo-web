@@ -222,7 +222,7 @@ export default function SearchPage() {
 
       <main className="flex-1 mx-auto w-full max-w-6xl px-4 pt-20 sm:pt-24 pb-8">
         <h1 className="text-xl font-bold text-text-heading mb-4">
-          施設をさがす
+          おでかけ先を探す
         </h1>
 
         {/* Search Form */}
@@ -377,6 +377,44 @@ export default function SearchPage() {
             </button>
           </div>
         </form>
+
+        {/* Active Filter Tags */}
+        {(() => {
+          const tags: { label: string; onRemove: () => void }[] = [];
+          if (prefecture) tags.push({ label: prefecture, onRemove: () => setPrefecture("") });
+          if (facilityType) tags.push({ label: facilityType, onRemove: () => setFacilityType("") });
+          selectedSizes.forEach((s) => {
+            const lbl = PET_SIZES.find((p) => p.value === s)?.label ?? s;
+            tags.push({ label: lbl, onRemove: () => setSelectedSizes((prev) => prev.filter((x) => x !== s)) });
+          });
+          if (keyword) tags.push({ label: keyword, onRemove: () => setKeyword("") });
+          selectedFeatures.forEach((f) => tags.push({ label: f, onRemove: () => setSelectedFeatures((prev) => prev.filter((x) => x !== f)) }));
+          selectedServices.forEach((s) => tags.push({ label: s, onRemove: () => setSelectedServices((prev) => prev.filter((x) => x !== s)) }));
+          if (priceRange) {
+            const lbl = PRICE_RANGES.find((p) => p.value === priceRange)?.label ?? priceRange;
+            tags.push({ label: lbl, onRemove: () => setPriceRange("") });
+          }
+          if (minRating > 0) tags.push({ label: `${minRating}以上`, onRemove: () => setMinRating(0) });
+
+          if (tags.length === 0) return null;
+          return (
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <span className="text-xs font-bold text-text-muted shrink-0">絞り込み条件</span>
+              {tags.map((tag) => (
+                <span key={tag.label} className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700">
+                  {tag.label}
+                  <button
+                    type="button"
+                    onClick={() => { tag.onRemove(); setTimeout(() => search(), 0); }}
+                    className="ml-0.5 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </span>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Sort & Count Bar */}
         {searched && (

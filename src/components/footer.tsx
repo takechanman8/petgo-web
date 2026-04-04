@@ -31,7 +31,7 @@ export function Footer() {
           <div>
             <h3 className="text-sm font-bold text-white mb-4">サービス</h3>
             <ul className="space-y-2.5 text-sm">
-              <li><Link href="/search" className="hover:text-white transition-colors">施設を探す</Link></li>
+              <li><Link href="/search" className="hover:text-white transition-colors">おでかけ先を探す</Link></li>
               <li><Link href="/features" className="hover:text-white transition-colors">特集</Link></li>
               <li><Link href="/magazine" className="hover:text-white transition-colors">PetGoマガジン</Link></li>
               <li><Link href="/pass" className="hover:text-white transition-colors">PetGo PASS</Link></li>
